@@ -880,6 +880,26 @@ angular.module('mx.components', [
 
 })();
 
+(function () {
+	'use strict';
+
+	MxTextAreaCtrl.$inject = ['mx.internationalization'];
+
+	function MxTextAreaCtrl(internationalization) {
+		mx.components.FormControlControllerBase.call(this, internationalization);
+		this.rows = this.rows || 4;
+		return this;
+	}
+
+	angular.module('mx.components').directive('mxTextArea', function () {
+		var directive = new mx.components.FormControlBase(MxTextAreaCtrl, 'mx-text-area/mx-text-area.html');
+		angular.extend(directive.bindToController, {
+			rows: '@'
+		});
+		return directive;
+	});
+})();
+
 (function (w) {
 	'use strict';
 
@@ -942,26 +962,6 @@ angular.module('mx.components', [
 	w.mx.components.Forms = w.mx.components.Forms || {};
 })(window);
 
-
-(function () {
-	'use strict';
-
-	MxTextAreaCtrl.$inject = ['mx.internationalization'];
-
-	function MxTextAreaCtrl(internationalization) {
-		mx.components.FormControlControllerBase.call(this, internationalization);
-		this.rows = this.rows || 4;
-		return this;
-	}
-
-	angular.module('mx.components').directive('mxTextArea', function () {
-		var directive = new mx.components.FormControlBase(MxTextAreaCtrl, 'mx-text-area/mx-text-area.html');
-		angular.extend(directive.bindToController, {
-			rows: '@'
-		});
-		return directive;
-	});
-})();
 
 (function () {
 	'use strict';
@@ -4434,6 +4434,41 @@ angular.module('mx.components', [
 
 (function () {
 	'use strict';
+	function mxRepeater() {
+
+		MxRepeaterCtrl.$inject = ['$scope'];
+
+		function MxRepeaterCtrl($scope) {
+			var __$vm = this;
+			__$vm.initScope = function () {
+				if (__$vm.parentControllerAs) {
+					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
+				} else {
+					$scope.dataModel = $scope.$parent;
+				}
+			};
+		}
+
+		return {
+			restrict: 'E',
+			scope: {
+				entity: '=' /* object used in scopes of templates */
+			},
+			bindToController: {
+				entities: '=',
+				templateId: '@',
+				parentControllerAs: '@'
+			},
+			templateUrl: 'mx-repeater/mx-repeater.html',
+			controller: MxRepeaterCtrl,
+			controllerAs: '__$vm'
+		};
+	}
+
+	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
+})();
+(function () {
+	'use strict';
 
 	/**
 	 * @ngdoc directive
@@ -4504,41 +4539,6 @@ angular.module('mx.components', [
 	}
 })();
 
-(function () {
-	'use strict';
-	function mxRepeater() {
-
-		MxRepeaterCtrl.$inject = ['$scope'];
-
-		function MxRepeaterCtrl($scope) {
-			var __$vm = this;
-			__$vm.initScope = function () {
-				if (__$vm.parentControllerAs) {
-					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
-				} else {
-					$scope.dataModel = $scope.$parent;
-				}
-			};
-		}
-
-		return {
-			restrict: 'E',
-			scope: {
-				entity: '=' /* object used in scopes of templates */
-			},
-			bindToController: {
-				entities: '=',
-				templateId: '@',
-				parentControllerAs: '@'
-			},
-			templateUrl: 'mx-repeater/mx-repeater.html',
-			controller: MxRepeaterCtrl,
-			controllerAs: '__$vm'
-		};
-	}
-
-	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
-})();
 /**
  * Created by mabdurashidov on 2/21/2016.
  */
@@ -6071,6 +6071,247 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxJournal
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @description
+	 * The mxJournal control provides simple journal functionality.
+	 *
+	 * The example below demonstrates some of the attributes you may use with the Journal control:
+	 * @param {string} itemsPerPage@ - How many items should be shown at once
+	 * @param {string} currentUserId@ - current user identifier
+	 * @param {string} currentUserPhoto@ - current user avatar image
+	 * @param {expression} onGetData& - Callback function to load journal items
+	 * @param {expression} onAdd& - Callback function to add new comment
+	 * @param {expression} attachFilesHandler& - if set then files attaching functionality will be enabled.
+	 * 			It expects a function that returns a promise,
+	 *			result of which is an array of file objects that have at least a key "DisplayString".
+	 *			Example: [
+	 *				{DisplayString: "file1.txt", url: "path/to/file/file1.txt"},
+	 *				{DisplayString: "file2.pdf", url: "path/to/file/file2.pdf"},
+	 *				...
+	 *			];
+	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
+	 *
+	 * @usage:
+	 *	 	<mx-journal
+	 *			on-add="vm.addComment()"
+	 *			on-get-data="vm.getData()"
+	 *			read-only="false"
+	 *			data-disabled="true"
+	 *			current-user-id="12345"
+	 *			items-per-page="5">
+	 *		</mx-journal>
+	 */
+	angular.module('mx.components').directive('mxJournal', function () {
+
+		MxJournalCtrl.$inject = [
+			'$q',
+			'$timeout',
+			'$scope',
+			'$element',
+			'mx.internationalization',
+			'mx.shell.NotificationService'
+		];
+
+		function MxJournalCtrl(
+			$q,
+			$timeout,
+			$scope,
+			$element,
+			internationalization,
+			notificationService
+		) {
+			var vm = this;
+
+			vm.processingItems = false;
+			vm.canLoadMore = false;
+			vm._showRichEditor = false;
+
+			var itemsPerPage = vm.itemsPerPage ? parseInt(vm.itemsPerPage, 10) : 10;
+
+			vm.loadMoreItems = loadMoreItems;
+
+			vm.newComment = '';
+			vm.addComment = addComment;
+
+			vm._attachingInProgress = false;
+			vm._useFileAttachments = !!$($element).attr('attach-files-handler');
+			vm.attachments = [];
+			vm.attachFiles = attachFiles;
+			vm._handleRichTextBoxBlur = _handleRichTextBoxBlur;
+
+			vm.readOnly = !!vm.readOnly;
+
+			vm.items = [];
+
+			reload();
+
+			$scope.$watch('vm._showRichEditor', function () {
+				if (vm._showRichEditor) {
+					// scroll down on editor activated if there are scrollbar
+					$timeout(function () {
+						var parent = $element[0];
+						while (parent && !_hasScrollBar(parent) && parent.tabName !== 'BODY') {
+							parent = parent.parentElement;
+						}
+						if (parent && parent.tabName !== 'BODY') {
+							$(parent).animate({
+								scrollTop: parent.scrollTop + 110 + 'px'
+							}, 600);
+						}
+					}, 200);
+				}
+			});
+
+			return vm;
+
+			function reload() {
+				vm.newComment = '';
+				vm.attachments = [];
+				getJournalEntries(true);
+			}
+
+			function finishProcessingItems() {
+				vm.processingItems = false;
+			}
+
+			function loadMoreItems() {
+				if (vm.processingItems || !vm.canLoadMore) {
+					return;
+				}
+				getJournalEntries(false);
+			}
+
+			function getJournalEntries(reload) {
+				vm.canLoadMore = false;
+				vm.processingItems = true;
+				var start = 0;
+				if (!reload) {
+					start = vm.items.length;
+				}
+				$q.when(vm.onGetData({start: start, count: itemsPerPage + 1})).then(function (data) {
+					data = data || [];
+					var moreItemsExists = data.length === itemsPerPage + 1;
+					if (moreItemsExists) {
+						data.pop();
+					}
+
+					data.forEach(function (item) {
+						item.__my = item.userId === vm.currentUserId;
+						item.__created = new Date(item.created);
+
+					});
+					var items = null;
+					if (reload) {
+						items = data;
+					} else {
+						items = vm.items;
+						for (var i = 0; i < data.length; i++) {
+							items.push(data[i]);
+						}
+					}
+					if (items && items.length) {
+						items.forEach(function (item) {
+							item.__my = item.userId === vm.currentUserId;
+						});
+						vm.items = items;
+					}
+					vm.canLoadMore = moreItemsExists;
+				})
+				.finally(function () {
+					finishProcessingItems();
+				});
+			}
+
+			function addComment() {
+				if (!vm.newComment && vm.attachments.length === 0) {
+					return;
+				}
+				vm.adding = true;
+				$q.when(vm.onAdd({
+					text: vm.newComment,
+					attachments: vm.attachments
+				}))
+				.then(function () {
+					reload();
+					$timeout(function () {
+						vm._showRichEditor = false;
+					}, 100);
+				}, function (error) {
+					notificationService.error(
+						internationalization.get('components.journal.adding_error') +
+						(error && error.statusText ? ': ' + error.statusText : '')
+					);
+				})
+				.finally(function () {
+					vm.adding = false;
+				});
+			}
+
+			function attachFiles() {
+				vm._attachingInProgress = true;
+				$q.when(vm.attachFilesHandler())
+				.then(function (result) {
+					var _fileNamesList = vm.attachments.map(function (file) {
+						return file.DisplayString;
+					});
+					result.selectedObjects.forEach(function (file) {
+						if (_fileNamesList.indexOf(file.DisplayString) === -1) {
+							vm.attachments.push(file);
+						}
+					});
+				})
+				.finally(function () {
+					vm._attachingInProgress = false;
+				});
+			}
+
+			function _hasScrollBar(el) {
+				var result = false;
+				if (el) {
+					result = !!el.scrollTop;
+					if (!result) {
+						el.scrollTop = 1;
+						result = !!el.scrollTop;
+						el.scrollTop = 0;
+					}
+					result = result && $(el).css('overflow-y') !== 'hidden';
+				}
+				return result;
+			}
+
+			function _handleRichTextBoxBlur() {
+				$timeout(function () {
+					vm._showRichEditor = vm.newComment!=='' || vm.attachments.length > 0 || vm._attachingInProgress;
+				}, 100);
+			}
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				itemsPerPage: '@',
+				onGetData: '&',
+				onAdd: '&',
+				attachFilesHandler: '&',
+				currentUserId: '@',
+				currentUserPhoto: '@',
+				readOnly: '='
+			},
+			controller: MxJournalCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-journal/mx-journal.html'
+		};
+	});
+})();
+
+(function () {
+	'use strict';
+
 	angular.module('mx.components')
 		.directive('mxImagePreview', [
 			'$rootScope',
@@ -6627,260 +6868,6 @@ angular.module('mx.components', [
 		}]);
 })();
 
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxJournal
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @description
-	 * The mxJournal control provides simple journal functionality.
-	 *
-	 * The example below demonstrates some of the attributes you may use with the Journal control:
-	 * @param {string} itemsPerPage@ - How many items should be shown at once
-	 * @param {string} currentUserId@ - current user identifier
-	 * @param {string} currentUserPhoto@ - current user avatar image
-	 * @param {expression} onGetData& - Callback function to load journal items
-	 * @param {expression} onAdd& - Callback function to add new comment
-	 * @param {expression} attachFilesHandler& - if set then files attaching functionality will be enabled.
-	 * 			It expects a function that returns a promise,
-	 *			result of which is an array of file objects that have at least a key "DisplayString".
-	 *			Example: [
-	 *				{DisplayString: "file1.txt", url: "path/to/file/file1.txt"},
-	 *				{DisplayString: "file2.pdf", url: "path/to/file/file2.pdf"},
-	 *				...
-	 *			];
-	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
-	 *
-	 * @usage:
-	 *	 	<mx-journal
-	 *			on-add="vm.addComment()"
-	 *			on-get-data="vm.getData()"
-	 *			read-only="false"
-	 *			data-disabled="true"
-	 *			current-user-id="12345"
-	 *			items-per-page="5">
-	 *		</mx-journal>
-	 */
-	angular.module('mx.components').directive('mxJournal', function () {
-
-		MxJournalCtrl.$inject = [
-			'$q',
-			'$timeout',
-			'$scope',
-			'$element',
-			'mx.internationalization',
-			'mx.shell.NotificationService'
-		];
-
-		function MxJournalCtrl(
-			$q,
-			$timeout,
-			$scope,
-			$element,
-			internationalization,
-			notificationService
-		) {
-			var vm = this;
-
-			vm.processingItems = false;
-			vm.canLoadMore = false;
-			vm._showRichEditor = false;
-
-			var itemsPerPage = vm.itemsPerPage ? parseInt(vm.itemsPerPage, 10) : 10;
-
-			vm.loadMoreItems = loadMoreItems;
-
-			vm.newComment = '';
-			vm.addComment = addComment;
-
-			vm._attachingInProgress = false;
-			vm._useFileAttachments = !!$($element).attr('attach-files-handler');
-			vm.attachments = [];
-			vm.attachFiles = attachFiles;
-			vm._handleRichTextBoxBlur = _handleRichTextBoxBlur;
-
-			vm.readOnly = !!vm.readOnly;
-
-			vm.items = [];
-
-			reload();
-
-			$scope.$watch('vm._showRichEditor', function () {
-				if (vm._showRichEditor) {
-					// scroll down on editor activated if there are scrollbar
-					$timeout(function () {
-						var parent = $element[0];
-						while (parent && !_hasScrollBar(parent) && parent.tabName !== 'BODY') {
-							parent = parent.parentElement;
-						}
-						if (parent && parent.tabName !== 'BODY') {
-							$(parent).animate({
-								scrollTop: parent.scrollTop + 110 + 'px'
-							}, 600);
-						}
-					}, 200);
-				}
-			});
-
-			return vm;
-
-			function reload() {
-				vm.newComment = '';
-				vm.attachments = [];
-				getJournalEntries(true);
-			}
-
-			function finishProcessingItems() {
-				vm.processingItems = false;
-			}
-
-			function loadMoreItems() {
-				if (vm.processingItems || !vm.canLoadMore) {
-					return;
-				}
-				getJournalEntries(false);
-			}
-
-			function getJournalEntries(reload) {
-				vm.canLoadMore = false;
-				vm.processingItems = true;
-				var start = 0;
-				if (!reload) {
-					start = vm.items.length;
-				}
-				$q.when(vm.onGetData({start: start, count: itemsPerPage + 1})).then(function (data) {
-					data = data || [];
-					var moreItemsExists = data.length === itemsPerPage + 1;
-					if (moreItemsExists) {
-						data.pop();
-					}
-
-					data.forEach(function (item) {
-						item.__my = item.userId === vm.currentUserId;
-						item.__created = new Date(item.created);
-
-					});
-					var items = null;
-					if (reload) {
-						items = data;
-					} else {
-						items = vm.items;
-						for (var i = 0; i < data.length; i++) {
-							items.push(data[i]);
-						}
-					}
-					if (items && items.length) {
-						items.forEach(function (item) {
-							item.__my = item.userId === vm.currentUserId;
-						});
-						vm.items = items;
-					}
-					vm.canLoadMore = moreItemsExists;
-				})
-				.finally(function () {
-					finishProcessingItems();
-				});
-			}
-
-			function addComment() {
-				if (!vm.newComment && vm.attachments.length === 0) {
-					return;
-				}
-				vm.adding = true;
-				$q.when(vm.onAdd({
-					text: vm.newComment,
-					attachments: vm.attachments
-				}))
-				.then(function () {
-					reload();
-					$timeout(function () {
-						vm._showRichEditor = false;
-					}, 100);
-				}, function (error) {
-					notificationService.error(
-						internationalization.get('components.journal.adding_error') +
-						(error && error.statusText ? ': ' + error.statusText : '')
-					);
-				})
-				.finally(function () {
-					vm.adding = false;
-				});
-			}
-
-			function attachFiles() {
-				vm._attachingInProgress = true;
-				$q.when(vm.attachFilesHandler())
-				.then(function (result) {
-					var _fileNamesList = vm.attachments.map(function (file) {
-						return file.DisplayString;
-					});
-					result.selectedObjects.forEach(function (file) {
-						if (_fileNamesList.indexOf(file.DisplayString) === -1) {
-							vm.attachments.push(file);
-						}
-					});
-				})
-				.finally(function () {
-					vm._attachingInProgress = false;
-				});
-			}
-
-			function _hasScrollBar(el) {
-				var result = false;
-				if (el) {
-					result = !!el.scrollTop;
-					if (!result) {
-						el.scrollTop = 1;
-						result = !!el.scrollTop;
-						el.scrollTop = 0;
-					}
-					result = result && $(el).css('overflow-y') !== 'hidden';
-				}
-				return result;
-			}
-
-			function _handleRichTextBoxBlur() {
-				$timeout(function () {
-					vm._showRichEditor = vm.newComment!=='' || vm.attachments.length > 0 || vm._attachingInProgress;
-				}, 100);
-			}
-		}
-
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				itemsPerPage: '@',
-				onGetData: '&',
-				onAdd: '&',
-				attachFilesHandler: '&',
-				currentUserId: '@',
-				currentUserPhoto: '@',
-				readOnly: '='
-			},
-			controller: MxJournalCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-journal/mx-journal.html'
-		};
-	});
-})();
-
-(function () {
-	'use strict';
-
-	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
-		function mxi18nFilter(string, defaultText) {
-			return internationalization.get(string, defaultText);
-		}
-
-		return mxi18nFilter;
-	}]);
-
-})();
-
 (function (){
     'use strict';
 
@@ -7078,6 +7065,19 @@ angular.module('mx.components', [
             closePanel();
         }
     }
+
+})();
+
+(function () {
+	'use strict';
+
+	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
+		function mxi18nFilter(string, defaultText) {
+			return internationalization.get(string, defaultText);
+		}
+
+		return mxi18nFilter;
+	}]);
 
 })();
 
@@ -8782,6 +8782,196 @@ angular.module('mx.components', [
 	});
 })();
 
+(function () {
+	'use strict';
+
+	angular.module('mx.components')
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxDraggable
+	 * @module mx.components
+	 * @restrict A
+	 *
+	 * @description
+	 * Enables possibility to drag element.
+	 *
+	 * `mxDraggable` gets string.
+	 *	If it's `false` then element-dragging will disabled.
+	 *	If it's JSON - it will be passed to droppable element.
+	 *
+	 * Example 1:
+	 * ```html
+	 *    <div 	mx-draggable="{\'mydata\': 123}"></div>
+	 *    <div mx-droppable="vm.onDrop($event)"></div>
+	 * ```
+	 *
+	 * Example 2:
+	 * ```html
+	 *    <div 	mx-draggable="{{ vm.draggable ? '{\'mydata\': 123}' : 'false' }}"></div>
+	 *    <div mx-droppable="{{ vm.draggable ? 'vm.onDrop($event)' : 'false' }}"></div>
+	 * ```
+	 *
+	 **/
+	.directive('mxDraggable', [
+		'mx.components.DragNDropUtils',
+		'$parse',
+		function (
+			dragNDropUtils,
+			$parse
+		) {
+			return {
+				restrict: 'A',
+				link: function (scope, element, attrs) {
+					var dragstartHandler = function (event) {
+						var data = null;
+						if (attrs.mxDraggable) {
+							data = $parse(attrs.mxDraggable)(scope);
+						}
+						if (data) {
+							dragNDropUtils.setDropData(event, data);
+						}
+					};
+
+					var handleDragging = function () {
+						var mxDragVal = attrs.mxDraggable;
+						if (mxDragVal.toLowerCase() !== 'false') {
+							element
+								.attr('draggable', true)
+								.on('dragstart', dragstartHandler);
+						} else {
+							element
+								.removeAttr('draggable')
+								.off('dragstart', dragstartHandler);
+						}
+					};
+					handleDragging();
+					attrs.$observe('mxDraggable', handleDragging);
+				}
+			};
+
+		}])
+
+		/**
+		 * @ngdoc directive
+		 * @name mx.components:mxDroppable
+		 * @module mx.components
+		 * @restrict A
+		 *
+		 * @description
+		 * Enables possibility to drop on this element another draggable element.
+		 *
+		 * `mxDroppable` gets string.
+		 *	If it's `false` then dropping will be disallowed.
+		 *	If it's some method then it will be executed.
+		 *
+		 * Example 1:
+		 * ```html
+		 *    <div 	mx-draggable="{\'mydata\': 123}"></div>
+		 *    <div mx-droppable="vm.onDrop($event)"></div>
+		 * ```
+		 *
+		 * Example 2:
+		 * ```html
+		 *    <div 	mx-draggable="{{ vm.draggable ? '{\'mydata\': 123}' : 'false' }}"></div>
+		 *    <div mx-droppable="{{ vm.draggable ? 'vm.onDrop($event)' : 'false' }}"></div>
+		 * ```
+		 *
+		 **/
+		.directive('mxDroppable', ['$parse', function ($parse) {
+			return {
+				restrict: 'A',
+				link: function (scope, element, attrs) {
+					var dropHandler = function (event) {
+						event.preventDefault();
+						event.stopPropagation();
+						element.removeClass('mx-drag-hover');
+						if (attrs.mxDroppable) {
+							$parse(attrs.mxDroppable)(scope, {$event: event});
+						}
+					};
+					var dragoverHandler = function (event) {
+						event.preventDefault();
+						event.stopPropagation();
+						element.addClass('mx-drag-hover');
+					};
+					var dragleaveHandler = function (event) {
+						event.preventDefault();
+						event.stopPropagation();
+						element.removeClass('mx-drag-hover');
+					};
+					var handleDropping = function () {
+						var mxDropVal = attrs.mxDroppable;
+						if (mxDropVal.toLowerCase() !== 'false') {
+							element
+								.attr('allow-drop', true)
+								.on('drop', dropHandler)
+								.on('dragover', dragoverHandler)
+								.on('dragleave', dragleaveHandler);
+						} else {
+							element
+								.removeAttr('allow-drop')
+								.off('drop', dropHandler)
+								.off('dragover', dragoverHandler)
+								.off('dragleave', dragleaveHandler);
+						}
+					};
+					//handleDropping();
+					attrs.$observe('mxDroppable', handleDropping);
+				}
+			};
+
+		}])
+
+		/**
+		 * @ngdoc factory
+		 * @name mx.components:DragNDropUtils
+		 * @module mx.components
+		 *
+		 * @description
+		 * Allows to pass data from draggable to droppable element.
+		 * It has 2 methods: `getDropData()` and `setDropData()`
+		 *
+		 **/
+		.factory('mx.components.DragNDropUtils', [
+			'mx.internationalization',
+		function (
+			internationalization
+		) {
+			var service = {
+				getDropData: getDropData,
+				setDropData: setDropData
+			};
+
+			return service;
+
+			function getDropData(event) {
+				var dataTransfer = event.dataTransfer ||
+									event.originalEvent && event.originalEvent.dataTransfer;
+				if (dataTransfer) {
+					return JSON.parse(dataTransfer.getData('text'));
+				} else {
+
+					throw new Error(internationalization.get(
+						'components.errors.can_no_access_data_transfer_object'
+					));
+				}
+			}
+
+			function setDropData(event, value) {
+				var dataTransfer = event.dataTransfer ||
+									event.originalEvent && event.originalEvent.dataTransfer;
+				if (dataTransfer) {
+					dataTransfer.setData('text', JSON.stringify(value));
+				} else {
+					throw new Error(internationalization.get(
+						'components.errors.can_no_access_data_transfer_object'
+					));
+				}
+			}
+		}]);
+})();
+
 (function (w) {
 	'use strict';
 
@@ -9233,196 +9423,6 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
-	angular.module('mx.components')
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxDraggable
-	 * @module mx.components
-	 * @restrict A
-	 *
-	 * @description
-	 * Enables possibility to drag element.
-	 *
-	 * `mxDraggable` gets string.
-	 *	If it's `false` then element-dragging will disabled.
-	 *	If it's JSON - it will be passed to droppable element.
-	 *
-	 * Example 1:
-	 * ```html
-	 *    <div 	mx-draggable="{\'mydata\': 123}"></div>
-	 *    <div mx-droppable="vm.onDrop($event)"></div>
-	 * ```
-	 *
-	 * Example 2:
-	 * ```html
-	 *    <div 	mx-draggable="{{ vm.draggable ? '{\'mydata\': 123}' : 'false' }}"></div>
-	 *    <div mx-droppable="{{ vm.draggable ? 'vm.onDrop($event)' : 'false' }}"></div>
-	 * ```
-	 *
-	 **/
-	.directive('mxDraggable', [
-		'mx.components.DragNDropUtils',
-		'$parse',
-		function (
-			dragNDropUtils,
-			$parse
-		) {
-			return {
-				restrict: 'A',
-				link: function (scope, element, attrs) {
-					var dragstartHandler = function (event) {
-						var data = null;
-						if (attrs.mxDraggable) {
-							data = $parse(attrs.mxDraggable)(scope);
-						}
-						if (data) {
-							dragNDropUtils.setDropData(event, data);
-						}
-					};
-
-					var handleDragging = function () {
-						var mxDragVal = attrs.mxDraggable;
-						if (mxDragVal.toLowerCase() !== 'false') {
-							element
-								.attr('draggable', true)
-								.on('dragstart', dragstartHandler);
-						} else {
-							element
-								.removeAttr('draggable')
-								.off('dragstart', dragstartHandler);
-						}
-					};
-					handleDragging();
-					attrs.$observe('mxDraggable', handleDragging);
-				}
-			};
-
-		}])
-
-		/**
-		 * @ngdoc directive
-		 * @name mx.components:mxDroppable
-		 * @module mx.components
-		 * @restrict A
-		 *
-		 * @description
-		 * Enables possibility to drop on this element another draggable element.
-		 *
-		 * `mxDroppable` gets string.
-		 *	If it's `false` then dropping will be disallowed.
-		 *	If it's some method then it will be executed.
-		 *
-		 * Example 1:
-		 * ```html
-		 *    <div 	mx-draggable="{\'mydata\': 123}"></div>
-		 *    <div mx-droppable="vm.onDrop($event)"></div>
-		 * ```
-		 *
-		 * Example 2:
-		 * ```html
-		 *    <div 	mx-draggable="{{ vm.draggable ? '{\'mydata\': 123}' : 'false' }}"></div>
-		 *    <div mx-droppable="{{ vm.draggable ? 'vm.onDrop($event)' : 'false' }}"></div>
-		 * ```
-		 *
-		 **/
-		.directive('mxDroppable', ['$parse', function ($parse) {
-			return {
-				restrict: 'A',
-				link: function (scope, element, attrs) {
-					var dropHandler = function (event) {
-						event.preventDefault();
-						event.stopPropagation();
-						element.removeClass('mx-drag-hover');
-						if (attrs.mxDroppable) {
-							$parse(attrs.mxDroppable)(scope, {$event: event});
-						}
-					};
-					var dragoverHandler = function (event) {
-						event.preventDefault();
-						event.stopPropagation();
-						element.addClass('mx-drag-hover');
-					};
-					var dragleaveHandler = function (event) {
-						event.preventDefault();
-						event.stopPropagation();
-						element.removeClass('mx-drag-hover');
-					};
-					var handleDropping = function () {
-						var mxDropVal = attrs.mxDroppable;
-						if (mxDropVal.toLowerCase() !== 'false') {
-							element
-								.attr('allow-drop', true)
-								.on('drop', dropHandler)
-								.on('dragover', dragoverHandler)
-								.on('dragleave', dragleaveHandler);
-						} else {
-							element
-								.removeAttr('allow-drop')
-								.off('drop', dropHandler)
-								.off('dragover', dragoverHandler)
-								.off('dragleave', dragleaveHandler);
-						}
-					};
-					//handleDropping();
-					attrs.$observe('mxDroppable', handleDropping);
-				}
-			};
-
-		}])
-
-		/**
-		 * @ngdoc factory
-		 * @name mx.components:DragNDropUtils
-		 * @module mx.components
-		 *
-		 * @description
-		 * Allows to pass data from draggable to droppable element.
-		 * It has 2 methods: `getDropData()` and `setDropData()`
-		 *
-		 **/
-		.factory('mx.components.DragNDropUtils', [
-			'mx.internationalization',
-		function (
-			internationalization
-		) {
-			var service = {
-				getDropData: getDropData,
-				setDropData: setDropData
-			};
-
-			return service;
-
-			function getDropData(event) {
-				var dataTransfer = event.dataTransfer ||
-									event.originalEvent && event.originalEvent.dataTransfer;
-				if (dataTransfer) {
-					return JSON.parse(dataTransfer.getData('text'));
-				} else {
-
-					throw new Error(internationalization.get(
-						'components.errors.can_no_access_data_transfer_object'
-					));
-				}
-			}
-
-			function setDropData(event, value) {
-				var dataTransfer = event.dataTransfer ||
-									event.originalEvent && event.originalEvent.dataTransfer;
-				if (dataTransfer) {
-					dataTransfer.setData('text', JSON.stringify(value));
-				} else {
-					throw new Error(internationalization.get(
-						'components.errors.can_no_access_data_transfer_object'
-					));
-				}
-			}
-		}]);
-})();
-
-(function () {
-	'use strict';
-
 	var standardPageSizes = [10, 20, 50, 100];
 	angular.module('mx.components')
 		.directive('mxWorkspaceCommonPagingPanel', function () {
@@ -9530,40 +9530,6 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
-	MxCurrencyController.$inject = ['mx.internationalization'];
-
-	function MxCurrencyController(internationalization) {
-		var vm = this;
-		mx.components.FormControlControllerBase.call(vm, internationalization);
-		vm.validationPattern = /^(:?\d+)?\.?\d+?$/;
-		return vm;
-	}
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxCurrency
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @description
-	 * The mx-currency control is used to display currency input field with currency code displayed.
-	 *
-	 * The control extends {@ref mx.components:FormControlBase FormControlBase} directive.
-	 *
-	 * @param {string} currencyCode@ - Currency code to be displayed.
-	 * @usage <mx-currency ng-model="vm.currencyValue" data-label="Currency editor" currency-code="{{vm.currencyCode}}"></mx-currency>
-	 */
-	angular.module('mx.components').directive('mxCurrency', function () {
-		var directive = new mx.components.FormControlBase(MxCurrencyController, 'mx-currency/mx-currency.html');
-		angular.extend(directive.bindToController, {
-			currencyCode: '@'
-		});
-		return directive;
-	});
-})();
-
-(function () {
-	'use strict';
-
 	/**
 	 * @ngdoc directive
 	 * @name mx.components:mxChoice
@@ -9651,6 +9617,40 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
+	MxCurrencyController.$inject = ['mx.internationalization'];
+
+	function MxCurrencyController(internationalization) {
+		var vm = this;
+		mx.components.FormControlControllerBase.call(vm, internationalization);
+		vm.validationPattern = /^(:?\d+)?\.?\d+?$/;
+		return vm;
+	}
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxCurrency
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @description
+	 * The mx-currency control is used to display currency input field with currency code displayed.
+	 *
+	 * The control extends {@ref mx.components:FormControlBase FormControlBase} directive.
+	 *
+	 * @param {string} currencyCode@ - Currency code to be displayed.
+	 * @usage <mx-currency ng-model="vm.currencyValue" data-label="Currency editor" currency-code="{{vm.currencyCode}}"></mx-currency>
+	 */
+	angular.module('mx.components').directive('mxCurrency', function () {
+		var directive = new mx.components.FormControlBase(MxCurrencyController, 'mx-currency/mx-currency.html');
+		angular.extend(directive.bindToController, {
+			currencyCode: '@'
+		});
+		return directive;
+	});
+})();
+
+(function () {
+	'use strict';
+
 	MxCheckboxCtrl.$inject = ['mx.internationalization'];
 
 	function MxCheckboxCtrl(internationalization) {
@@ -9667,48 +9667,6 @@ angular.module('mx.components', [
 
 })();
 
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxButton
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @scope {}
-	 * @description Custom button directive
-	 * @param {string} label@ - Text to be displayed on button
-	 * @param {string} icon@ - Name of Material Design icon to be displayed on button
-	 * @param {string} styles@ - Styles to be applied to button <br /><i>Default: md-raised md-primary</i>
-	 * @param {bool} focused@ - If true, a button should have input focus when the page loads <br /><i>Default: false</i>
-	 * @param {function} click& - Button click handler
-	 * @param {boolean} isDisabled= - Specifies if button is disabled
-	 * @usage <mx-button click='clickFn' label='A button' icon='check' focused='false' styles='btn-style'></mx-button>
-	 */
-	angular.module('mx.components').directive('mxButton', function () {
-		MxButtonCtrl.$inject = [];
-
-		function MxButtonCtrl() {
-		}
-
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				label: '@',
-				icon: '@',
-				styles: '@',
-				click: '&',
-				focused: '@',
-				isDisabled: '='
-			},
-			controller: MxButtonCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-button/mx-button.html'
-		};
-	});
-})();
 
 (function () {
 	'use strict';
@@ -9964,6 +9922,48 @@ angular.module('mx.components', [
 			controller: MxCalendarCtrl,
 			controllerAs: 'vm',
 			templateUrl: 'mx-calendar/mx-calendar.html'
+		};
+	});
+})();
+
+(function () {
+	'use strict';
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxButton
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @scope {}
+	 * @description Custom button directive
+	 * @param {string} label@ - Text to be displayed on button
+	 * @param {string} icon@ - Name of Material Design icon to be displayed on button
+	 * @param {string} styles@ - Styles to be applied to button <br /><i>Default: md-raised md-primary</i>
+	 * @param {bool} focused@ - If true, a button should have input focus when the page loads <br /><i>Default: false</i>
+	 * @param {function} click& - Button click handler
+	 * @param {boolean} isDisabled= - Specifies if button is disabled
+	 * @usage <mx-button click='clickFn' label='A button' icon='check' focused='false' styles='btn-style'></mx-button>
+	 */
+	angular.module('mx.components').directive('mxButton', function () {
+		MxButtonCtrl.$inject = [];
+
+		function MxButtonCtrl() {
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				label: '@',
+				icon: '@',
+				styles: '@',
+				click: '&',
+				focused: '@',
+				isDisabled: '='
+			},
+			controller: MxButtonCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-button/mx-button.html'
 		};
 	});
 })();
@@ -14527,8 +14527,8 @@ $templateCache.put("mx-bottom-sheet/mx-bottom-sheet-grid-template.html","<md-bot
 $templateCache.put("mx-bottom-sheet/mx-bottom-sheet-list-template.html","<md-bottom-sheet class=\"md-list md-has-header md-whiteframe-z5\" ng-cloak=\"\" ng-style=\"{\'top\': vm.topOffset}\"><md-list><md-list-item ng-repeat=\"item in items\"><md-button class=\"md-list-item-content\" md-autofocus=\"vm.focus(item)\" ng-class=\"item.isFocused ? \'active\' : \'inactive\'\" ng-disabled=\"item.isFocused\" ng-click=\"vm.execute(item)\"><md-icon>done</md-icon><span class=\"md-inline-list-icon-label\">{{::item.name}}</span></md-button></md-list-item></md-list></md-bottom-sheet>");
 $templateCache.put("mx-bottom-sheet/mx-bottom-sheet.html","<div class=\"md-btn bottom-sheet-btn\" ng-attr-tooltip=\"{{::vm.internationalization.iconAlt}}\" tooltip-append-to-body=\"true\" tooltip-placement=\"bottom\" tooltip-html=\"true\" ng-click=\"vm.toggleDialog(vm.options); $event.stopPropagation();\"><span><md-icon ng-if=\"vm.options.icon\">{{vm.options.icon || \'apps\'}}</md-icon></span></div>");
 $templateCache.put("mx-button/mx-button.html","<md-button ng-attr-md-autofocus=\"{{vm.focused || false}}\" ng-disabled=\"vm.isDisabled\" aria-label=\"vm.label\" ng-class=\"[vm.styles ? vm.styles : \'md-raised md-accent md-hue-2\']\" ng-click=\"vm.click()\"><md-icon ng-if=\"vm.icon\">{{vm.icon}}</md-icon>{{vm.label}}</md-button>");
-$templateCache.put("mx-calendar/mx-calendar.html","<div oc-lazy-load=\"ui.calendar\"><div ui-calendar=\"vm.options\" ng-model=\"vm._items\"></div></div>");
 $templateCache.put("mx-checkbox/mx-checkbox.html","<md-input-container><md-checkbox name=\"{{::vm.internalName}}\" ng-model=\"vm.model\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-true-value=\"true\" ng-false-value=\"false\" aria-label=\"vm.label\"><span ng-bind-html=\"vm.label\"></span></md-checkbox></md-input-container>");
+$templateCache.put("mx-calendar/mx-calendar.html","<div oc-lazy-load=\"ui.calendar\"><div ui-calendar=\"vm.options\" ng-model=\"vm._items\"></div></div>");
 $templateCache.put("mx-choice/mx-choice.html","<div class=\"mx-choice flex\"><md-radio-group ng-model=\"__$vm.selectedPanelName\" ng-if=\"__$vm.showSwitchButtons\"><div class=\"flex\" ng-repeat=\"__$panel in __$vm.panels | orderBy: \'position\'\"><md-radio-button value=\"{{__$panel.name}}\" class=\"mx-choice__choice-button\"><span class=\"mx-choice__panel-title\">{{__$panel.title}}</span></md-radio-button><div class=\"mx-choice__panel-description\">{{__$panel.description}}</div></div></md-radio-group><div class=\"mx-choice__panel flex\" ng-repeat=\"__$panel in __$vm.panels track by __$panel.id\" ng-if=\"__$panel.name === (__$vm.selectedPanelName || __$vm.panels[0].name)\" ng-include=\"\" src=\"__$panel.id\" data-onload=\"__$vm.initScope()\"></div></div>");
 $templateCache.put("mx-currency/mx-currency.html","<md-input-container class=\"mx-currency\"><span class=\"mx-currency--code\">{{vm.currencyCode}}</span><mx-text-box class=\"mx-currency--value\" data-label=\"{{vm.label}}\" data-read-only=\"vm._readOnly\" data-disabled=\"vm._disabled\" ng-model=\"vm.model\" ng-pattern=\"vm.validationPattern\"></mx-text-box></md-input-container>");
 $templateCache.put("mx-datasource-paging-panel/mx-datasource-paging-panel.html","<div class=\"mx-workspace-common-paging-panel--container\" layout=\"row\" layout-align=\"center center\"><div class=\"mx-workspace-common-paging-panel--pagenumber\">{{\'components.mx-datasource-paging-panel.pageSize\' | mxi18n}}:</div><div><md-select aria-label=\"Rows count selector\" class=\"ui-grid-pager-row-count-selector\" md-container-class=\"ui-grid-pager-row-count-dropdown\" ng-disabled=\"vm.isDisabled\" ng-model=\"vm.pageSize\"><md-option ng-repeat=\"size in vm.pageSizes\" ng-value=\"size\">{{ size }}</md-option></md-select></div><p class=\"mx-workspace-common-paging-panel--pages\" ng-bind=\"vm.pagingLabel\"></p><md-button class=\"mx-workspace-common-paging-panel--prev\" ng-disabled=\"vm.isNotPrevPage\" aria-label=\"Prev\" ng-click=\"vm.prev()\"><md-icon>chevron_left</md-icon></md-button><div class=\"mx-workspace-common-paging-panel--pagenumber\">{{vm.preprocessor.page + 1}}</div><md-button class=\"mx-workspace-common-paging-panel--next\" ng-disabled=\"vm.isNotNextPage\" aria-label=\"Prev\" ng-click=\"vm.next()\"><md-icon>chevron_right</md-icon></md-button></div>");

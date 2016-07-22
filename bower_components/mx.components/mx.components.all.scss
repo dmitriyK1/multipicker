@@ -822,23 +822,6 @@ mx-checkbox {
 	}
 }
 
-.mx-choice {
-
-	.mx-choice__choice-button {
-		margin-bottom: .5rem;
-	}
-	.mx-choice__panel-description {
-		font-size: 1.2rem;
-		line-height: 1.6rem;
-		color: $mx_palette_Primary_400;
-		margin-left: 3.2rem;
-	}
-	fieldset {
-		border: 0;
-	}
-}
-
-
 .mx-currency {
 	.md-input-has-value, .md-input-focused {
 		label {
@@ -866,6 +849,23 @@ mx-checkbox {
 		float: left;
 	}
 }
+.mx-choice {
+
+	.mx-choice__choice-button {
+		margin-bottom: .5rem;
+	}
+	.mx-choice__panel-description {
+		font-size: 1.2rem;
+		line-height: 1.6rem;
+		color: $mx_palette_Primary_400;
+		margin-left: 3.2rem;
+	}
+	fieldset {
+		border: 0;
+	}
+}
+
+
 mx-workspace-common-paging-panel {
 	display: block;
 	position: absolute;
@@ -2581,6 +2581,22 @@ button.md-button.md-icon-button.journal-item--new__preview-attach-button {
 
 mx-multi-picker {
 
+
+    &.ng-invalid-required {
+		md-chips .md-chips {
+			box-shadow: 0 1px #fb4848;
+		}
+
+		.mx-multipicker--container md-chips .md-chips.md-focused {
+			box-shadow: 0 2px #fb4848;
+		}
+
+		md-input-container label,
+		md-input-container.md-input-focused label {
+			color: #fb4848;
+		}
+    }
+
     .readonly .md-chips {
 		background-position: bottom 0 left 0;
 		background-size: 4px 1px;
@@ -2631,7 +2647,7 @@ mx-multi-picker {
 	}
 
 	md-input-container:not(.md-input-invalid).md-input-focused [disabled] label {
-		color: rgba(0,0,0,0.26) !important;
+		color: rgba(0,0,0,0.26);
 	}
 
 	md-input-container label:not(.md-no-float):not(.md-container-ignore),
