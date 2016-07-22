@@ -989,6 +989,18 @@ mx-checkbox {
   mx-checkbox .md-label {
     margin-top: -3px; }
 
+.mx-choice .mx-choice__choice-button {
+  margin-bottom: .5rem; }
+
+.mx-choice .mx-choice__panel-description {
+  font-size: 1.2rem;
+  line-height: 1.6rem;
+  color: #52656e;
+  margin-left: 3.2rem; }
+
+.mx-choice fieldset {
+  border: 0; }
+
 .mx-currency .md-input-has-value label, .mx-currency .md-input-focused label {
   margin-left: -36px; }
 
@@ -1008,18 +1020,6 @@ mx-checkbox {
 
 .mx-currency .mx-currency--value {
   float: left; }
-
-.mx-choice .mx-choice__choice-button {
-  margin-bottom: .5rem; }
-
-.mx-choice .mx-choice__panel-description {
-  font-size: 1.2rem;
-  line-height: 1.6rem;
-  color: #52656e;
-  margin-left: 3.2rem; }
-
-.mx-choice fieldset {
-  border: 0; }
 
 mx-workspace-common-paging-panel {
   display: block;
@@ -2271,6 +2271,7 @@ mx-multi-picker.ng-invalid-required md-input-container label,
 mx-multi-picker.ng-invalid-required md-input-container.md-input-focused label {
   color: #fb4848; }
 
+mx-multi-picker .disabled .md-chips,
 mx-multi-picker .readonly .md-chips {
   background-position: bottom 0 left 0;
   background-size: 4px 1px;

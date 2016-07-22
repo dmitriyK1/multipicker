@@ -822,6 +822,23 @@ mx-checkbox {
 	}
 }
 
+.mx-choice {
+
+	.mx-choice__choice-button {
+		margin-bottom: .5rem;
+	}
+	.mx-choice__panel-description {
+		font-size: 1.2rem;
+		line-height: 1.6rem;
+		color: $mx_palette_Primary_400;
+		margin-left: 3.2rem;
+	}
+	fieldset {
+		border: 0;
+	}
+}
+
+
 .mx-currency {
 	.md-input-has-value, .md-input-focused {
 		label {
@@ -849,23 +866,6 @@ mx-checkbox {
 		float: left;
 	}
 }
-.mx-choice {
-
-	.mx-choice__choice-button {
-		margin-bottom: .5rem;
-	}
-	.mx-choice__panel-description {
-		font-size: 1.2rem;
-		line-height: 1.6rem;
-		color: $mx_palette_Primary_400;
-		margin-left: 3.2rem;
-	}
-	fieldset {
-		border: 0;
-	}
-}
-
-
 mx-workspace-common-paging-panel {
 	display: block;
 	position: absolute;
@@ -2597,6 +2597,7 @@ mx-multi-picker {
 		}
     }
 
+    .disabled .md-chips,
     .readonly .md-chips {
 		background-position: bottom 0 left 0;
 		background-size: 4px 1px;
