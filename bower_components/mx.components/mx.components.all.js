@@ -1,265 +1,3 @@
-'use strict';
-
-angular.module('mx.components', [
-	'ngSanitize',
-	'ngMaterial',
-	'ngFileUpload',
-	'ui.grid',
-	'ui.grid.selection',
-	'ui.grid.resizeColumns',
-	'ui.grid.autoResize',
-	'ui.grid.moveColumns',
-	'ui.grid.edit',
-	'ui.grid.cellNav',
-	'ui.grid.pagination',
-	'ui.grid.expandable',
-	'scDateTime',
-	'ui.tinymce',
-	'oc.lazyLoad'
-])
-.config([
-	'$mdIconProvider',
-	'mx.internationalizationProvider',
-	'$ocLazyLoadProvider',
-	function(
-		$mdIconProvider,
-		internationalizationProvider,
-		$ocLazyLoadProvider
-	) {
-		$mdIconProvider.iconSet('mxComponents', 'mx-components-icons.svg');
-
-		internationalizationProvider.addNamespace(
-			new mx.internationalization.Namespace('components', null, mx.components.internationalization)
-		);
-
-		// Here in details https://oclazyload.readme.io/docs/oclazyloadprovider
-		$ocLazyLoadProvider.config({
-			events: true
-		});
-	}
-]);
-
-(function (w) {
-	'use strict';
-
-	angular.module('mx.components').provider('mx.components.DataProviderRegistry', function () {
-		var vm = this;
-
-		var providers = {};
-
-		vm.register = function (name, provider) {
-			providers[name] = provider;
-		};
-
-		vm.$get = ['$q', '$injector', function ($q, $injector) {
-
-			return {
-				get: get,
-				getData: getData
-			};
-
-			function get(name) {
-				if (providers.hasOwnProperty(name)) {
-					return providers[name];
-				}
-				throw new Error('Data provider with name "' + name + '" was not found');
-			}
-
-			function getData(name, parameters) {
-				var defer = $q.defer();
-				$q.when(get(name).getData($injector, parameters)).then(function (data) {
-					defer.resolve(data);
-				}, function (error) {
-					defer.reject(error);
-				});
-				return defer.promise;
-			}
-		}];
-	});
-
-	function MxDataProvider(getData) {
-		if (!getData || typeof getData !== 'function') {
-			throw new Error('data provider should have getData method');
-		}
-		Object.defineProperty(this, 'getData', {value: getData});
-	}
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.DataProvider = MxDataProvider;
-
-})(window);
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc provider
-	 * @name mx.components:LazyLoadCfg
-	 *
-	 * @description
-	 * `LazyLoadCfg` allows to set components dir, where modules/js-files that should be loaded on demand are places.
-	 * This approach allows to set `componentsDir` via 'mx.components.LazyLoadCfgProvider' on config phase
-	 * as well as via 'mx.components.LazyLoadCfg' on executing phase.
-	 *
-	 * Default dir is: 'bower_components/'.
-	 *
-	 * To configure components Dir make like this:
-	 *
-	 * For config phase:
-	 * ```js
-	 * .config(['mx.components.LazyLoadCfgProvider', function (lazyLoadCfgProvider) {
-	 * 		lazyLoadCfgProvider.setComponentsDir('my_components_root/');
-	 * 	}])
-	 * ```
-	 *
-	 * For executing phase:
-	 * ```js
-	 * .run('myCtrl', ['mx.components.LazyLoadCfg', function (lazyLoadCfg) {
-	 * 		lazyLoadCfg.componentsDir = 'my_components_root/';
-	 * 	}]);
-	 * ```
-	 */
-	angular
-	.module('mx.components')
-	.provider('mx.components.LazyLoadCfg', function () {
-		var _componentsDir = 'bower_components/';
-		this.setComponentsDir = function(dir) {
-			_componentsDir = dir;
-		};
-		this.$get = function () {
-			return {
-				componentsDir: _componentsDir
-			};
-		};
-	});
-
-})();
-
-(function (w) {
-	'use strict';
-
-	var mxi18nNamespace = function (name, url, definition) {
-		Object.defineProperty(this, 'name', {writable: true, value: name});
-		Object.defineProperty(this, 'url', {writable: true, value: url});
-		Object.defineProperty(this, 'definition', {writable: true, value: definition});
-		Object.defineProperty(this, 'languages', {writable: true, value: {}});
-	};
-
-	mxi18nNamespace.prototype = {
-		localize: function (language, chunks) {
-
-			function loadLanguage(that, lng) {
-				var lngDef = {};
-				if (that.definition) {
-					lngDef = that.definition[lng] || {};
-				} else {
-					if (that.url) {
-						var url = that.url.replace('#LNG#', lng);
-						var xhr = new XMLHttpRequest();
-						xhr.open('GET', url, false);
-						xhr.send(null);
-						if (xhr.status === 200) {
-							lngDef = JSON.parse(xhr.responseText);
-						} else {
-							throw new Error('Cannot load language "' + lng + '" localization from ' + url);
-						}
-					}
-				}
-				that.languages[lng] = lngDef;
-				return lngDef;
-			}
-
-			var localization = this.languages[language] || loadLanguage(this, language);
-			chunks.forEach(function (chunk, index) {
-				localization = localization[chunk] || (index + 1 === chunks.length ? null : {});
-			});
-			return localization;
-		}
-	};
-
-	angular.module('mx.components').provider('mx.internationalization', function () {
-		var vm = this;
-
-		var devLanguageName = 'en';
-		var language = devLanguageName;
-		var namespaceDefs = {};
-
-		vm.setLanguage = function (lng) {
-			language = lng;
-		};
-
-		vm.addNamespace = function (namespace) {
-			namespaceDefs[namespace.name] = namespace;
-		};
-
-		vm.$get = function () {
-
-			var vm = {
-				get: get,
-				getFormatted: getFormatted
-			};
-
-			Object.defineProperty(vm, 'language', {
-				get: function () {
-					return language;
-				},
-				set: function (value) {
-					language = value;
-				}
-			});
-
-			return vm;
-
-			function def(defValue, key) {
-				return typeof defValue === 'undefined' ? '[localization:' + key + ']' : defValue;
-			}
-
-			function get(key, defValue) {
-				if (!key) {
-					return def(defValue, key);
-				}
-
-				var chunks = key.split('.');
-				if (chunks.length === 1) {
-					throw new Error('"' + key + '" cannot be used as a key for localization. Use [namespace.key] format.');
-				}
-				var namespace = chunks[0];
-				var namespaceDef = namespaceDefs[namespace];
-				if (!namespaceDef) {
-					throw new Error('"' + namespace + '" not found. Use mx.internationalizationProvider.addNamespace to register a namespace.');
-				}
-
-				var res = namespaceDef.localize(language, chunks.slice(1));
-
-				if (!res && language !== devLanguageName) {
-					//fallback to development language
-					res = namespaceDef.localize(devLanguageName, chunks.slice(1));
-				}
-
-				return  res || def(defValue, key);
-			}
-
-			function getFormatted() {
-				var key = arguments[0];
-				var str = get(key);
-				if (!str || str.indexOf('[localization:') === 0) {
-					return str;
-				}
-				for (var i = 1; i < arguments.length; i++) {
-					var regEx = new RegExp('\\{' + (i - 1) + '\\}', 'gm');
-					str = str.replace(regEx, arguments[i]);
-				}
-				return str;
-			}
-		};
-	});
-
-	w.mx = w.mx || {};
-	w.mx.internationalization = w.mx.internationalization || {};
-	w.mx.internationalization.Namespace = mxi18nNamespace;
-})(window);
-
 (function (w, d) {
 	'use strict';
 
@@ -432,6 +170,47 @@ angular.module('mx.components', [
 	w.mx.components.Utils = new MxUtils();
 
 })(window, document);
+
+'use strict';
+
+angular.module('mx.components', [
+	'ngSanitize',
+	'ngMaterial',
+	'ngFileUpload',
+	'ui.grid',
+	'ui.grid.selection',
+	'ui.grid.resizeColumns',
+	'ui.grid.autoResize',
+	'ui.grid.moveColumns',
+	'ui.grid.edit',
+	'ui.grid.cellNav',
+	'ui.grid.pagination',
+	'ui.grid.expandable',
+	'scDateTime',
+	'ui.tinymce',
+	'oc.lazyLoad'
+])
+.config([
+	'$mdIconProvider',
+	'mx.internationalizationProvider',
+	'$ocLazyLoadProvider',
+	function(
+		$mdIconProvider,
+		internationalizationProvider,
+		$ocLazyLoadProvider
+	) {
+		$mdIconProvider.iconSet('mxComponents', 'mx-components-icons.svg');
+
+		internationalizationProvider.addNamespace(
+			new mx.internationalization.Namespace('components', null, mx.components.internationalization)
+		);
+
+		// Here in details https://oclazyload.readme.io/docs/oclazyloadprovider
+		$ocLazyLoadProvider.config({
+			events: true
+		});
+	}
+]);
 
 (function() {
 	'use strict';
@@ -719,65 +498,223 @@ angular.module('mx.components', [
 (function (w) {
 	'use strict';
 
-	MxTextBoxCtrl.$inject = ['mx.internationalization', '$element', '$timeout'];
-
-	function MxTextBoxCtrl(internationalization, $element, $timeout) {
-		mx.components.FormControlControllerBase.call(this, internationalization, $timeout);
+	angular.module('mx.components').provider('mx.components.DataProviderRegistry', function () {
 		var vm = this;
-		vm.type = vm.type || 'text';
-		vm.trackInternal = vm.type !== 'text' && vm.type !== 'password';
 
-		var input = $element.find('input');
-		if (input) {
-			input.on('blur', function() {
-				$element.blur();
-				vm.showingHints(false);
-			});
-			input.on('focus', function() {
-				$element.triggerHandler('focus');
-				vm.showingHints(true);
-			});
-		}
+		var providers = {};
 
-		return vm;
-	}
+		vm.register = function (name, provider) {
+			providers[name] = provider;
+		};
 
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxTextBox
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @description
-	 * The mx-text-box control is used to create a text box where the user can input text.
-	 *
-	 * The example below demonstrates some of the attributes you may use with the TextBox control:
-	 * @param {string} name@ - The name property sets or returns the value of the name attribute of a mxTextBox.
-	 * @param {string} label@ - Defines label displayed on the form
-	 * @param {boolean} required= - The required property sets or returns whether a mxTextBox must be filled out before submitting a form.
-	 * @param {boolean} disabled= - The disabled property sets or returns whether a mxTextBox should be disabled, or not.
-	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
-	 * @param {object} model=ngModel - directive binds element to the object in the model.
-	 * @param {string} type="email" - <a href="https://docs.angularjs.org/api/ng/input/input[email]">E-mail directive</a>
-	 * @param {string} ngPattern - <a href="https://docs.angularjs.org/api/ng/directive/ngPattern">ngPattern</a>
-	 *
-	 * @usage <mx-text-box ng-model="vm.inputData" data-label="mixed" data-read-only="true" data-disabled="true" data-required="true" data-name="readOnly" ng-pattern="regex"></mx-text-box>
-	 */
-	angular.module('mx.components').directive('mxTextBox', function () {
-		var directive = new mx.components.FormControlBase(MxTextBoxCtrl, 'mx-text-box/mx-text-box.html');
-		angular.extend(directive.bindToController,
-			{
-				type: '@',
-				pattern:'='
-			});
-		return directive;
+		vm.$get = ['$q', '$injector', function ($q, $injector) {
+
+			return {
+				get: get,
+				getData: getData
+			};
+
+			function get(name) {
+				if (providers.hasOwnProperty(name)) {
+					return providers[name];
+				}
+				throw new Error('Data provider with name "' + name + '" was not found');
+			}
+
+			function getData(name, parameters) {
+				var defer = $q.defer();
+				$q.when(get(name).getData($injector, parameters)).then(function (data) {
+					defer.resolve(data);
+				}, function (error) {
+					defer.reject(error);
+				});
+				return defer.promise;
+			}
+		}];
 	});
 
+	function MxDataProvider(getData) {
+		if (!getData || typeof getData !== 'function') {
+			throw new Error('data provider should have getData method');
+		}
+		Object.defineProperty(this, 'getData', {value: getData});
+	}
 
 	w.mx = w.mx || {};
 	w.mx.components = w.mx.components || {};
-	w.mx.components.Forms = w.mx.components.Forms || {};
+	w.mx.components.DataProvider = MxDataProvider;
+
 })(window);
 
+(function () {
+	'use strict';
+
+	/**
+	 * @ngdoc provider
+	 * @name mx.components:LazyLoadCfg
+	 *
+	 * @description
+	 * `LazyLoadCfg` allows to set components dir, where modules/js-files that should be loaded on demand are places.
+	 * This approach allows to set `componentsDir` via 'mx.components.LazyLoadCfgProvider' on config phase
+	 * as well as via 'mx.components.LazyLoadCfg' on executing phase.
+	 *
+	 * Default dir is: 'bower_components/'.
+	 *
+	 * To configure components Dir make like this:
+	 *
+	 * For config phase:
+	 * ```js
+	 * .config(['mx.components.LazyLoadCfgProvider', function (lazyLoadCfgProvider) {
+	 * 		lazyLoadCfgProvider.setComponentsDir('my_components_root/');
+	 * 	}])
+	 * ```
+	 *
+	 * For executing phase:
+	 * ```js
+	 * .run('myCtrl', ['mx.components.LazyLoadCfg', function (lazyLoadCfg) {
+	 * 		lazyLoadCfg.componentsDir = 'my_components_root/';
+	 * 	}]);
+	 * ```
+	 */
+	angular
+	.module('mx.components')
+	.provider('mx.components.LazyLoadCfg', function () {
+		var _componentsDir = 'bower_components/';
+		this.setComponentsDir = function(dir) {
+			_componentsDir = dir;
+		};
+		this.$get = function () {
+			return {
+				componentsDir: _componentsDir
+			};
+		};
+	});
+
+})();
+
+(function (w) {
+	'use strict';
+
+	var mxi18nNamespace = function (name, url, definition) {
+		Object.defineProperty(this, 'name', {writable: true, value: name});
+		Object.defineProperty(this, 'url', {writable: true, value: url});
+		Object.defineProperty(this, 'definition', {writable: true, value: definition});
+		Object.defineProperty(this, 'languages', {writable: true, value: {}});
+	};
+
+	mxi18nNamespace.prototype = {
+		localize: function (language, chunks) {
+
+			function loadLanguage(that, lng) {
+				var lngDef = {};
+				if (that.definition) {
+					lngDef = that.definition[lng] || {};
+				} else {
+					if (that.url) {
+						var url = that.url.replace('#LNG#', lng);
+						var xhr = new XMLHttpRequest();
+						xhr.open('GET', url, false);
+						xhr.send(null);
+						if (xhr.status === 200) {
+							lngDef = JSON.parse(xhr.responseText);
+						} else {
+							throw new Error('Cannot load language "' + lng + '" localization from ' + url);
+						}
+					}
+				}
+				that.languages[lng] = lngDef;
+				return lngDef;
+			}
+
+			var localization = this.languages[language] || loadLanguage(this, language);
+			chunks.forEach(function (chunk, index) {
+				localization = localization[chunk] || (index + 1 === chunks.length ? null : {});
+			});
+			return localization;
+		}
+	};
+
+	angular.module('mx.components').provider('mx.internationalization', function () {
+		var vm = this;
+
+		var devLanguageName = 'en';
+		var language = devLanguageName;
+		var namespaceDefs = {};
+
+		vm.setLanguage = function (lng) {
+			language = lng;
+		};
+
+		vm.addNamespace = function (namespace) {
+			namespaceDefs[namespace.name] = namespace;
+		};
+
+		vm.$get = function () {
+
+			var vm = {
+				get: get,
+				getFormatted: getFormatted
+			};
+
+			Object.defineProperty(vm, 'language', {
+				get: function () {
+					return language;
+				},
+				set: function (value) {
+					language = value;
+				}
+			});
+
+			return vm;
+
+			function def(defValue, key) {
+				return typeof defValue === 'undefined' ? '[localization:' + key + ']' : defValue;
+			}
+
+			function get(key, defValue) {
+				if (!key) {
+					return def(defValue, key);
+				}
+
+				var chunks = key.split('.');
+				if (chunks.length === 1) {
+					throw new Error('"' + key + '" cannot be used as a key for localization. Use [namespace.key] format.');
+				}
+				var namespace = chunks[0];
+				var namespaceDef = namespaceDefs[namespace];
+				if (!namespaceDef) {
+					throw new Error('"' + namespace + '" not found. Use mx.internationalizationProvider.addNamespace to register a namespace.');
+				}
+
+				var res = namespaceDef.localize(language, chunks.slice(1));
+
+				if (!res && language !== devLanguageName) {
+					//fallback to development language
+					res = namespaceDef.localize(devLanguageName, chunks.slice(1));
+				}
+
+				return  res || def(defValue, key);
+			}
+
+			function getFormatted() {
+				var key = arguments[0];
+				var str = get(key);
+				if (!str || str.indexOf('[localization:') === 0) {
+					return str;
+				}
+				for (var i = 1; i < arguments.length; i++) {
+					var regEx = new RegExp('\\{' + (i - 1) + '\\}', 'gm');
+					str = str.replace(regEx, arguments[i]);
+				}
+				return str;
+			}
+		};
+	});
+
+	w.mx = w.mx || {};
+	w.mx.internationalization = w.mx.internationalization || {};
+	w.mx.internationalization.Namespace = mxi18nNamespace;
+})(window);
 
 (function () {
 	'use strict';
@@ -963,6 +900,69 @@ angular.module('mx.components', [
 	});
 })();
 
+(function (w) {
+	'use strict';
+
+	MxTextBoxCtrl.$inject = ['mx.internationalization', '$element', '$timeout'];
+
+	function MxTextBoxCtrl(internationalization, $element, $timeout) {
+		mx.components.FormControlControllerBase.call(this, internationalization, $timeout);
+		var vm = this;
+		vm.type = vm.type || 'text';
+		vm.trackInternal = vm.type !== 'text' && vm.type !== 'password';
+
+		var input = $element.find('input');
+		if (input) {
+			input.on('blur', function() {
+				$element.blur();
+				vm.showingHints(false);
+			});
+			input.on('focus', function() {
+				$element.triggerHandler('focus');
+				vm.showingHints(true);
+			});
+		}
+
+		return vm;
+	}
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxTextBox
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @description
+	 * The mx-text-box control is used to create a text box where the user can input text.
+	 *
+	 * The example below demonstrates some of the attributes you may use with the TextBox control:
+	 * @param {string} name@ - The name property sets or returns the value of the name attribute of a mxTextBox.
+	 * @param {string} label@ - Defines label displayed on the form
+	 * @param {boolean} required= - The required property sets or returns whether a mxTextBox must be filled out before submitting a form.
+	 * @param {boolean} disabled= - The disabled property sets or returns whether a mxTextBox should be disabled, or not.
+	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
+	 * @param {object} model=ngModel - directive binds element to the object in the model.
+	 * @param {string} type="email" - <a href="https://docs.angularjs.org/api/ng/input/input[email]">E-mail directive</a>
+	 * @param {string} ngPattern - <a href="https://docs.angularjs.org/api/ng/directive/ngPattern">ngPattern</a>
+	 *
+	 * @usage <mx-text-box ng-model="vm.inputData" data-label="mixed" data-read-only="true" data-disabled="true" data-required="true" data-name="readOnly" ng-pattern="regex"></mx-text-box>
+	 */
+	angular.module('mx.components').directive('mxTextBox', function () {
+		var directive = new mx.components.FormControlBase(MxTextBoxCtrl, 'mx-text-box/mx-text-box.html');
+		angular.extend(directive.bindToController,
+			{
+				type: '@',
+				pattern:'='
+			});
+		return directive;
+	});
+
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.Forms = w.mx.components.Forms || {};
+})(window);
+
+
 (function () {
 	'use strict';
 
@@ -1008,198 +1008,6 @@ angular.module('mx.components', [
 	angular.module('mx.components').directive('mxTabs', [mxTabs]);
 
 })();
-
-(function (w) {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxRichTextBox
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @scope {}
-	 * @description Rich text box (WYSIWYG editor).
-	 * @param {string} ng-model= - editing model as html.
-	 * @param {boolean} advancedMode@ - (default: `true`) there are 2 modes: "simple" and "advanced".
-	 *        For mobile-device it uses "simple" mode always, no metter the value.
-	 *        If "advancedMode" set as `true` then for wide-screens will be used "advanced" mode.
-	 *        If "advancedMode" set as `false` then for wide-screens will be used "simple" mode.
-	 * @param {callback} on-focus& - fires of focus.
-	 * @param {callback} on-blur& - fires of blur.
-	 * @param {boolean} set-focus@  - if `true` then the focus will be set automatically.
-	 * @usage <mx-rich-text-box nd-model="myHtml"></mx-rich-text-box>
-	 */
-
-	MxRichTextBoxCtrl.$inject = [
-		'$scope',
-		'$element',
-		'$window',
-		'mx.internationalization',
-		'mxTinymceConfig',
-		'uiTinymceConfig',
-		'$timeout'
-	];
-
-	function MxRichTextBoxCtrl(
-		$scope,
-		$element,
-		$window,
-		internationalization,
-		mxTinymceConfig,
-		uiTinymceConfig,
-		$timeout
-	) {
-		var vm = this;
-		var editorInstace;
-
-		/* default settings (should be moved to API)   start */
-		var maxMobileDeviceWidth = 959;
-		/* tablet-landscape */
-		var isMobile = $window.matchMedia('(max-device-width: ' + maxMobileDeviceWidth + 'px)').matches ||
-			$window.outerWidth <= maxMobileDeviceWidth;
-
-		var useAdvancedMode = isMobile ?
-			false :
-			vm.advancedMode ? vm.advancedMode.toLowerCase() !== 'false' : true;
-
-		vm.tinymceOptions = {
-			menubar: false,
-			statusbar: false,
-			plugins: useAdvancedMode ? ['textcolor colorpicker textpattern paste link image'] : undefined,
-			/* enables pasting images from clipboard */
-			paste_data_images: !isMobile,
-			/* prevents auto upload for images */
-			automatic_uploads: false,
-			/* prevents converting img src to blob */
-			images_dataimg_filter: function (img) {
-				return img.hasAttribute('internal-blob');
-			},
-			height: useAdvancedMode ? 300 : 115,
-			min_height: 100,
-			toolbar: useAdvancedMode ?
-				'bold italic underline fontsizeselect link image alignleft aligncenter alignright alignjustify outdent indent bullist numlist' :
-				'bold italic underline | bullist',
-			toolbar_items_size: useAdvancedMode ? 'small' : 'normal',
-			setup: function (editor) {
-				editorInstace = editor;
-				_handleDisabledMode(editor, vm._disabled);
-				_handleReadonlyMode(editor, vm._readOnly);
-				_handleFocus(editor, vm.setFocus);
-				editor.on('init', function () {
-					this.getDoc().body.style.fontSize = '14px';
-					this.getDoc().body.style.lineHeight = '16px';
-					$(this.getDoc().head).append('<style>p {margin: 5px 0px;}</style>');
-					editor.on('focus', function (e) {
-						$timeout(function () {
-							vm.onFocus({event: e, editor: editor});
-						});
-					});
-					editor.on('blur', function (e) {
-						$timeout(function () {
-							vm.onBlur({event: e, editor: editor});
-						});
-					});
-				});
-				editor.on('keypress', function (event) {
-					if (this.getBody().getAttribute('contenteditable') === 'false') {
-						event.preventDefault();
-					}
-				});
-				if (!useAdvancedMode) {
-					_putToolbarToBottom(editor);
-				}
-				if (mxTinymceConfig.baseUrl) {
-					editorInstace.baseURL = mxTinymceConfig.baseUrl;
-					uiTinymceConfig.baseUrl = mxTinymceConfig.baseUrl;
-				}
-			},
-		};
-
-		angular.extend(vm.tinymceOptions, mxTinymceConfig);
-
-		/* default settings (should be moved to API)     end */
-
-		$scope.$watch('vm.setFocus', function (newValue) {
-			_handleFocus(editorInstace, newValue);
-		});
-
-		$scope.$watch('vm._disabled', function (newValue) {
-			_handleDisabledMode(editorInstace, newValue);
-		});
-
-		$scope.$watch('vm._readOnly', function (newValue) {
-			_handleReadonlyMode(editorInstace, newValue);
-		});
-
-		function _putToolbarToBottom(editor) {
-			editor.on('init', function (evt) {
-				var editorEl = $(evt.target.editorContainer);
-				editorEl.addClass('mx-rich-text-box-toolbar-bottom-mode');
-				var toolbar = editorEl.find('>.mce-container-body >.mce-toolbar-grp');
-				var editor = editorEl.find('>.mce-container-body >.mce-edit-area');
-				// switch the order of the elements
-				toolbar.detach().insertAfter(editor);
-			});
-		}
-
-		function _defineBoolValue(value) {
-			return typeof value === 'boolean' ?
-				value :
-				typeof value === 'string' ? value.toLowerCase() !== 'false' : !!value;
-		}
-
-		function _handleFocus(editor, value) {
-			var boolValue = _defineBoolValue(value);
-			if (editor && boolValue) {
-				$timeout(function () {
-					editor.focus();
-				}, 200);
-			}
-		}
-
-		function _handleDisabledMode(editor, value) {
-			var boolValue = _defineBoolValue(value);
-			if (editor) {
-				editor.settings.readonly = boolValue;
-				editor.settings.disabled = boolValue;
-				$($element).attr('disabled', boolValue);
-			}
-		}
-
-		function _handleReadonlyMode(editor, value) {
-			var boolValue = _defineBoolValue(value);
-			if (editor) {
-				editor.settings.readonly = boolValue;
-				$($element).attr('readonly', boolValue);
-			}
-		}
-
-		mx.components.FormControlControllerBase.call(this, internationalization);
-		return vm;
-	}
-
-	angular.module('mx.components')
-		.value('mxTinymceConfig', {})
-		.directive('mxRichTextBox', function () {
-			var directive = new mx.components.FormControlBase(
-				MxRichTextBoxCtrl,
-				'mx-rich-text-box/mx-rich-text-box.html'
-			);
-			angular.extend(directive.bindToController, {
-				toolbar: '=',
-				advancedMode: '@',
-				onBlur: '&',
-				onFocus: '&',
-				setFocus: '@'
-			});
-			return directive;
-		});
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.Forms = w.mx.components.Forms || {};
-
-})(window);
 
 // jscs:disable
 // jshint ignore: start
@@ -4432,41 +4240,198 @@ angular.module('mx.components', [
 // jshint ignore: end
 // jscs:enable
 
-(function () {
+(function (w) {
 	'use strict';
-	function mxRepeater() {
 
-		MxRepeaterCtrl.$inject = ['$scope'];
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxRichTextBox
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @scope {}
+	 * @description Rich text box (WYSIWYG editor).
+	 * @param {string} ng-model= - editing model as html.
+	 * @param {boolean} advancedMode@ - (default: `true`) there are 2 modes: "simple" and "advanced".
+	 *        For mobile-device it uses "simple" mode always, no metter the value.
+	 *        If "advancedMode" set as `true` then for wide-screens will be used "advanced" mode.
+	 *        If "advancedMode" set as `false` then for wide-screens will be used "simple" mode.
+	 * @param {callback} on-focus& - fires of focus.
+	 * @param {callback} on-blur& - fires of blur.
+	 * @param {boolean} set-focus@  - if `true` then the focus will be set automatically.
+	 * @usage <mx-rich-text-box nd-model="myHtml"></mx-rich-text-box>
+	 */
 
-		function MxRepeaterCtrl($scope) {
-			var __$vm = this;
-			__$vm.initScope = function () {
-				if (__$vm.parentControllerAs) {
-					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
-				} else {
-					$scope.dataModel = $scope.$parent;
+	MxRichTextBoxCtrl.$inject = [
+		'$scope',
+		'$element',
+		'$window',
+		'mx.internationalization',
+		'mxTinymceConfig',
+		'uiTinymceConfig',
+		'$timeout'
+	];
+
+	function MxRichTextBoxCtrl(
+		$scope,
+		$element,
+		$window,
+		internationalization,
+		mxTinymceConfig,
+		uiTinymceConfig,
+		$timeout
+	) {
+		var vm = this;
+		var editorInstace;
+
+		/* default settings (should be moved to API)   start */
+		var maxMobileDeviceWidth = 959;
+		/* tablet-landscape */
+		var isMobile = $window.matchMedia('(max-device-width: ' + maxMobileDeviceWidth + 'px)').matches ||
+			$window.outerWidth <= maxMobileDeviceWidth;
+
+		var useAdvancedMode = isMobile ?
+			false :
+			vm.advancedMode ? vm.advancedMode.toLowerCase() !== 'false' : true;
+
+		vm.tinymceOptions = {
+			menubar: false,
+			statusbar: false,
+			plugins: useAdvancedMode ? ['textcolor colorpicker textpattern paste link image'] : undefined,
+			/* enables pasting images from clipboard */
+			paste_data_images: !isMobile,
+			/* prevents auto upload for images */
+			automatic_uploads: false,
+			/* prevents converting img src to blob */
+			images_dataimg_filter: function (img) {
+				return img.hasAttribute('internal-blob');
+			},
+			height: useAdvancedMode ? 300 : 115,
+			min_height: 100,
+			toolbar: useAdvancedMode ?
+				'bold italic underline fontsizeselect link image alignleft aligncenter alignright alignjustify outdent indent bullist numlist' :
+				'bold italic underline | bullist',
+			toolbar_items_size: useAdvancedMode ? 'small' : 'normal',
+			setup: function (editor) {
+				editorInstace = editor;
+				_handleDisabledMode(editor, vm._disabled);
+				_handleReadonlyMode(editor, vm._readOnly);
+				_handleFocus(editor, vm.setFocus);
+				editor.on('init', function () {
+					this.getDoc().body.style.fontSize = '14px';
+					this.getDoc().body.style.lineHeight = '16px';
+					$(this.getDoc().head).append('<style>p {margin: 5px 0px;}</style>');
+					editor.on('focus', function (e) {
+						$timeout(function () {
+							vm.onFocus({event: e, editor: editor});
+						});
+					});
+					editor.on('blur', function (e) {
+						$timeout(function () {
+							vm.onBlur({event: e, editor: editor});
+						});
+					});
+				});
+				editor.on('keypress', function (event) {
+					if (this.getBody().getAttribute('contenteditable') === 'false') {
+						event.preventDefault();
+					}
+				});
+				if (!useAdvancedMode) {
+					_putToolbarToBottom(editor);
 				}
-			};
+				if (mxTinymceConfig.baseUrl) {
+					editorInstace.baseURL = mxTinymceConfig.baseUrl;
+					uiTinymceConfig.baseUrl = mxTinymceConfig.baseUrl;
+				}
+			},
+		};
+
+		angular.extend(vm.tinymceOptions, mxTinymceConfig);
+
+		/* default settings (should be moved to API)     end */
+
+		$scope.$watch('vm.setFocus', function (newValue) {
+			_handleFocus(editorInstace, newValue);
+		});
+
+		$scope.$watch('vm._disabled', function (newValue) {
+			_handleDisabledMode(editorInstace, newValue);
+		});
+
+		$scope.$watch('vm._readOnly', function (newValue) {
+			_handleReadonlyMode(editorInstace, newValue);
+		});
+
+		function _putToolbarToBottom(editor) {
+			editor.on('init', function (evt) {
+				var editorEl = $(evt.target.editorContainer);
+				editorEl.addClass('mx-rich-text-box-toolbar-bottom-mode');
+				var toolbar = editorEl.find('>.mce-container-body >.mce-toolbar-grp');
+				var editor = editorEl.find('>.mce-container-body >.mce-edit-area');
+				// switch the order of the elements
+				toolbar.detach().insertAfter(editor);
+			});
 		}
 
-		return {
-			restrict: 'E',
-			scope: {
-				entity: '=' /* object used in scopes of templates */
-			},
-			bindToController: {
-				entities: '=',
-				templateId: '@',
-				parentControllerAs: '@'
-			},
-			templateUrl: 'mx-repeater/mx-repeater.html',
-			controller: MxRepeaterCtrl,
-			controllerAs: '__$vm'
-		};
+		function _defineBoolValue(value) {
+			return typeof value === 'boolean' ?
+				value :
+				typeof value === 'string' ? value.toLowerCase() !== 'false' : !!value;
+		}
+
+		function _handleFocus(editor, value) {
+			var boolValue = _defineBoolValue(value);
+			if (editor && boolValue) {
+				$timeout(function () {
+					editor.focus();
+				}, 200);
+			}
+		}
+
+		function _handleDisabledMode(editor, value) {
+			var boolValue = _defineBoolValue(value);
+			if (editor) {
+				editor.settings.readonly = boolValue;
+				editor.settings.disabled = boolValue;
+				$($element).attr('disabled', boolValue);
+			}
+		}
+
+		function _handleReadonlyMode(editor, value) {
+			var boolValue = _defineBoolValue(value);
+			if (editor) {
+				editor.settings.readonly = boolValue;
+				$($element).attr('readonly', boolValue);
+			}
+		}
+
+		mx.components.FormControlControllerBase.call(this, internationalization);
+		return vm;
 	}
 
-	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
-})();
+	angular.module('mx.components')
+		.value('mxTinymceConfig', {})
+		.directive('mxRichTextBox', function () {
+			var directive = new mx.components.FormControlBase(
+				MxRichTextBoxCtrl,
+				'mx-rich-text-box/mx-rich-text-box.html'
+			);
+			angular.extend(directive.bindToController, {
+				toolbar: '=',
+				advancedMode: '@',
+				onBlur: '&',
+				onFocus: '&',
+				setFocus: '@'
+			});
+			return directive;
+		});
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.Forms = w.mx.components.Forms || {};
+
+})(window);
+
 (function () {
 	'use strict';
 
@@ -5422,6 +5387,41 @@ angular.module('mx.components', [
 
 })(window);
 
+(function () {
+	'use strict';
+	function mxRepeater() {
+
+		MxRepeaterCtrl.$inject = ['$scope'];
+
+		function MxRepeaterCtrl($scope) {
+			var __$vm = this;
+			__$vm.initScope = function () {
+				if (__$vm.parentControllerAs) {
+					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
+				} else {
+					$scope.dataModel = $scope.$parent;
+				}
+			};
+		}
+
+		return {
+			restrict: 'E',
+			scope: {
+				entity: '=' /* object used in scopes of templates */
+			},
+			bindToController: {
+				entities: '=',
+				templateId: '@',
+				parentControllerAs: '@'
+			},
+			templateUrl: 'mx-repeater/mx-repeater.html',
+			controller: MxRepeaterCtrl,
+			controllerAs: '__$vm'
+		};
+	}
+
+	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
+})();
 (function(w) {
 	'use strict';
 
@@ -6868,19 +6868,6 @@ angular.module('mx.components', [
 		}]);
 })();
 
-(function () {
-	'use strict';
-
-	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
-		function mxi18nFilter(string, defaultText) {
-			return internationalization.get(string, defaultText);
-		}
-
-		return mxi18nFilter;
-	}]);
-
-})();
-
 (function (){
     'use strict';
 
@@ -7914,49 +7901,14 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
-	angular.module('mx.components').directive('mxFileUploader', function () {
-
-		MxFileUploaderCtrl.$inject = [];
-
-		function MxFileUploaderCtrl() {
-			var vm = this;
-
-			vm.files = vm.files || [];
-
-			vm.filesSelected = filesSelected;
-			vm.removeFile = removeFile;
-
-			return vm;
-
-			function filesSelected(files) {
-				if (!files || !files.length) {
-					return;
-				}
-				for (var i = 0; i < files.length; i++) {
-					vm.files.push(files[i]);
-				}
-			}
-
-			function removeFile(file) {
-				var index = vm.files.indexOf(file);
-				if (index !== -1) {
-					vm.files.splice(index, 1);
-				}
-			}
-
+	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
+		function mxi18nFilter(string, defaultText) {
+			return internationalization.get(string, defaultText);
 		}
 
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				files: '='
-			},
-			controller: MxFileUploaderCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-file-uploader/mx-file-uploader.html'
-		};
-	});
+		return mxi18nFilter;
+	}]);
+
 })();
 
 (function () {
@@ -8289,6 +8241,54 @@ angular.module('mx.components', [
 	w.mx.components.Forms = w.mx.components.Forms || {};
 	w.mx.components.Forms.ErrorMessage = MxFormErrorMessage;
 })(window);
+
+(function () {
+	'use strict';
+
+	angular.module('mx.components').directive('mxFileUploader', function () {
+
+		MxFileUploaderCtrl.$inject = [];
+
+		function MxFileUploaderCtrl() {
+			var vm = this;
+
+			vm.files = vm.files || [];
+
+			vm.filesSelected = filesSelected;
+			vm.removeFile = removeFile;
+
+			return vm;
+
+			function filesSelected(files) {
+				if (!files || !files.length) {
+					return;
+				}
+				for (var i = 0; i < files.length; i++) {
+					vm.files.push(files[i]);
+				}
+			}
+
+			function removeFile(file) {
+				var index = vm.files.indexOf(file);
+				if (index !== -1) {
+					vm.files.splice(index, 1);
+				}
+			}
+
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				files: '='
+			},
+			controller: MxFileUploaderCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-file-uploader/mx-file-uploader.html'
+		};
+	});
+})();
 
 (function () {
 	'use strict';
@@ -8630,6 +8630,161 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxDropdown
+	 * @module mx.components
+	 * @restrict E
+	 *
+	 * @description
+	 * Implement a button with dropdown menu for some actions
+	 *
+	 * The following example shows hot to use mxDropdown.
+	 * mxDropdown expects 2 attributes:
+	 *   1) icon - icon for button which opens dropdown menu.
+	 *        Value should be the same as for 'md-svg-icon' attribute in 'md-icon' directive ( https://material.angularjs.org/latest/#/api/material.components.icon/directive/mdIcon )
+	 *   2) items - an array of objects with keys: 'icon', 'label', 'onItemClick', 'htmlClass'
+	 *        2.1) icon - an icon on item (not mandatory)
+	 *        2.2) label - a text label on item (not mandatory)
+	 *        2.3) onItemClick - a function, which will be executed when item is selected in dropdown menu
+	 *        2.4) htmlClass - can be used if we need to identify dropdown-item in DOM-model (not mandatory)
+	 *   3) expanded - if pass 'true' - then dropdown menu will be opened automatically. Also it's possible to read value to get know if dropdown menu is expanded.
+	 *   4) hideButton - if 'true' - open-button will be hidden (for example if we want to trigger dropdown menu expanting by some other event)
+	 *
+	 * Example 1:
+	 * Assume we have an array of items like this:
+	 * ```js
+	 * vm.menuItems = [{
+	 *		icon: 'save',
+	 *		label: 'Save',
+	 *		onItemClick: function() {alert('saved!'); }
+	 *	}, {
+	 *		icon: 'social:android',
+	 *		label: 'Load on phone',
+	 *		onItemClick: function() {alert('Loaded!'); }
+	 *	},
+	 *    ...
+	 * ];
+	 *```
+	 *
+	 * Then html will be like this:
+	 * ```html
+	 * <mx-dropdown
+	 *        icon="vertical-dots"
+	 *        items="vm.menuItems"
+	 *        context="vm">
+	 * </mx-dropdown>
+	 * ```
+	 * If "context" attribute is passed, then "onItemClick" will be executed in this passed context.
+	 *
+	 * Example 2:
+	 * ```html
+	 * <button ng-click="vm.isOpen = !vm.isOpen">My Button</button>
+	 * ...
+	 * <mx-dropdown
+	 *        icon="vertical-dots"
+	 *        items="vm.menuItems"
+	 *        hide-button="true"
+	 *        expanded="vm.isOpen">
+	 * </mx-dropdown>
+	 * ```
+	 *
+	 *
+	 **/
+
+	angular.module('mx.components').directive('mxDropdown', function () {
+
+		MxListCtrl.$inject = ['$q', '$document', '$scope', '$timeout', '$element'];
+
+		function MxListCtrl($q, $document, $scope, $timeout, $element) {
+			var vm = this;
+			var _preventCurrentOutClickClosing;
+
+			vm.expanded = false;
+			vm.handleBtnClick = handleBtnClick;
+			vm.hideButton = angular.lowercase(vm.hideButton);
+			vm.handleClick = handleClick;
+
+			var itemsLoaded = false;
+			$scope.$watch('vm.expanded', function () {
+				_preventCurrentOutClickClosing = true;
+				if (vm.expanded) {
+					var postponeOffsetVerification = false;
+					if (!itemsLoaded) {
+						itemsLoaded = true;
+						var items = vm.loadItems({context: vm.context});
+						if (items) {
+							postponeOffsetVerification = true;
+							$q.when(items).then(function (items) {
+								vm.items = items;
+								verifyOffset();
+							});
+						}
+					}
+					if (!postponeOffsetVerification) {
+						verifyOffset();
+					}
+					$document.bind('click', clickOutside);
+					$element.addClass('mx-dropdown-expanded');
+				} else {
+					$document.unbind('click', clickOutside);
+					$element.removeClass('mx-dropdown-expanded');
+				}
+			});
+
+			function verifyOffset() {
+				$timeout(function () {
+					var drop = $element.find('md-whiteframe');
+					if (!mx.components.Utils.elementInViewport(drop[0])) {
+						drop.addClass('mx-dropdown-list-wrap-up');
+					}
+					drop.css('visibility', 'visible');
+				}, 10);
+			}
+
+			function handleBtnClick() {
+				_preventCurrentOutClickClosing = true;
+				vm.expanded = !vm.expanded;
+			}
+
+			function clickOutside() {
+				if (_preventCurrentOutClickClosing) {
+					_preventCurrentOutClickClosing = false;
+				} else {
+					$timeout(function () {
+						vm.expanded = false;
+					});
+				}
+			}
+
+			function handleClick(event, item) {
+				item.onItemClick.call(vm.context, event);
+			}
+
+			return vm;
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				icon: '@',
+				items: '=',
+				expanded: '=',
+				hideButton: '@',
+				context: '=',
+				loadItems: '&'
+			},
+			controller: MxListCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-dropdown/mx-dropdown.html'
+		};
+	});
+})();
+
+(function () {
+	'use strict';
+
 	angular.module('mx.components')
 
 	/**
@@ -8815,161 +8970,6 @@ angular.module('mx.components', [
 				}
 			}
 		}]);
-})();
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxDropdown
-	 * @module mx.components
-	 * @restrict E
-	 *
-	 * @description
-	 * Implement a button with dropdown menu for some actions
-	 *
-	 * The following example shows hot to use mxDropdown.
-	 * mxDropdown expects 2 attributes:
-	 *   1) icon - icon for button which opens dropdown menu.
-	 *        Value should be the same as for 'md-svg-icon' attribute in 'md-icon' directive ( https://material.angularjs.org/latest/#/api/material.components.icon/directive/mdIcon )
-	 *   2) items - an array of objects with keys: 'icon', 'label', 'onItemClick', 'htmlClass'
-	 *        2.1) icon - an icon on item (not mandatory)
-	 *        2.2) label - a text label on item (not mandatory)
-	 *        2.3) onItemClick - a function, which will be executed when item is selected in dropdown menu
-	 *        2.4) htmlClass - can be used if we need to identify dropdown-item in DOM-model (not mandatory)
-	 *   3) expanded - if pass 'true' - then dropdown menu will be opened automatically. Also it's possible to read value to get know if dropdown menu is expanded.
-	 *   4) hideButton - if 'true' - open-button will be hidden (for example if we want to trigger dropdown menu expanting by some other event)
-	 *
-	 * Example 1:
-	 * Assume we have an array of items like this:
-	 * ```js
-	 * vm.menuItems = [{
-	 *		icon: 'save',
-	 *		label: 'Save',
-	 *		onItemClick: function() {alert('saved!'); }
-	 *	}, {
-	 *		icon: 'social:android',
-	 *		label: 'Load on phone',
-	 *		onItemClick: function() {alert('Loaded!'); }
-	 *	},
-	 *    ...
-	 * ];
-	 *```
-	 *
-	 * Then html will be like this:
-	 * ```html
-	 * <mx-dropdown
-	 *        icon="vertical-dots"
-	 *        items="vm.menuItems"
-	 *        context="vm">
-	 * </mx-dropdown>
-	 * ```
-	 * If "context" attribute is passed, then "onItemClick" will be executed in this passed context.
-	 *
-	 * Example 2:
-	 * ```html
-	 * <button ng-click="vm.isOpen = !vm.isOpen">My Button</button>
-	 * ...
-	 * <mx-dropdown
-	 *        icon="vertical-dots"
-	 *        items="vm.menuItems"
-	 *        hide-button="true"
-	 *        expanded="vm.isOpen">
-	 * </mx-dropdown>
-	 * ```
-	 *
-	 *
-	 **/
-
-	angular.module('mx.components').directive('mxDropdown', function () {
-
-		MxListCtrl.$inject = ['$q', '$document', '$scope', '$timeout', '$element'];
-
-		function MxListCtrl($q, $document, $scope, $timeout, $element) {
-			var vm = this;
-			var _preventCurrentOutClickClosing;
-
-			vm.expanded = false;
-			vm.handleBtnClick = handleBtnClick;
-			vm.hideButton = angular.lowercase(vm.hideButton);
-			vm.handleClick = handleClick;
-
-			var itemsLoaded = false;
-			$scope.$watch('vm.expanded', function () {
-				_preventCurrentOutClickClosing = true;
-				if (vm.expanded) {
-					var postponeOffsetVerification = false;
-					if (!itemsLoaded) {
-						itemsLoaded = true;
-						var items = vm.loadItems({context: vm.context});
-						if (items) {
-							postponeOffsetVerification = true;
-							$q.when(items).then(function (items) {
-								vm.items = items;
-								verifyOffset();
-							});
-						}
-					}
-					if (!postponeOffsetVerification) {
-						verifyOffset();
-					}
-					$document.bind('click', clickOutside);
-					$element.addClass('mx-dropdown-expanded');
-				} else {
-					$document.unbind('click', clickOutside);
-					$element.removeClass('mx-dropdown-expanded');
-				}
-			});
-
-			function verifyOffset() {
-				$timeout(function () {
-					var drop = $element.find('md-whiteframe');
-					if (!mx.components.Utils.elementInViewport(drop[0])) {
-						drop.addClass('mx-dropdown-list-wrap-up');
-					}
-					drop.css('visibility', 'visible');
-				}, 10);
-			}
-
-			function handleBtnClick() {
-				_preventCurrentOutClickClosing = true;
-				vm.expanded = !vm.expanded;
-			}
-
-			function clickOutside() {
-				if (_preventCurrentOutClickClosing) {
-					_preventCurrentOutClickClosing = false;
-				} else {
-					$timeout(function () {
-						vm.expanded = false;
-					});
-				}
-			}
-
-			function handleClick(event, item) {
-				item.onItemClick.call(vm.context, event);
-			}
-
-			return vm;
-		}
-
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				icon: '@',
-				items: '=',
-				expanded: '=',
-				hideButton: '@',
-				context: '=',
-				loadItems: '&'
-			},
-			controller: MxListCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-dropdown/mx-dropdown.html'
-		};
-	});
 })();
 
 (function (w) {
@@ -9530,40 +9530,6 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
-	MxCurrencyController.$inject = ['mx.internationalization'];
-
-	function MxCurrencyController(internationalization) {
-		var vm = this;
-		mx.components.FormControlControllerBase.call(vm, internationalization);
-		vm.validationPattern = /^(:?\d+)?\.?\d+?$/;
-		return vm;
-	}
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxCurrency
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @description
-	 * The mx-currency control is used to display currency input field with currency code displayed.
-	 *
-	 * The control extends {@ref mx.components:FormControlBase FormControlBase} directive.
-	 *
-	 * @param {string} currencyCode@ - Currency code to be displayed.
-	 * @usage <mx-currency ng-model="vm.currencyValue" data-label="Currency editor" currency-code="{{vm.currencyCode}}"></mx-currency>
-	 */
-	angular.module('mx.components').directive('mxCurrency', function () {
-		var directive = new mx.components.FormControlBase(MxCurrencyController, 'mx-currency/mx-currency.html');
-		angular.extend(directive.bindToController, {
-			currencyCode: '@'
-		});
-		return directive;
-	});
-})();
-
-(function () {
-	'use strict';
-
 	/**
 	 * @ngdoc directive
 	 * @name mx.components:mxChoice
@@ -9646,6 +9612,40 @@ angular.module('mx.components', [
 
 	angular.module('mx.components').directive('mxChoice', [mxChoice]);
 
+})();
+
+(function () {
+	'use strict';
+
+	MxCurrencyController.$inject = ['mx.internationalization'];
+
+	function MxCurrencyController(internationalization) {
+		var vm = this;
+		mx.components.FormControlControllerBase.call(vm, internationalization);
+		vm.validationPattern = /^(:?\d+)?\.?\d+?$/;
+		return vm;
+	}
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxCurrency
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @description
+	 * The mx-currency control is used to display currency input field with currency code displayed.
+	 *
+	 * The control extends {@ref mx.components:FormControlBase FormControlBase} directive.
+	 *
+	 * @param {string} currencyCode@ - Currency code to be displayed.
+	 * @usage <mx-currency ng-model="vm.currencyValue" data-label="Currency editor" currency-code="{{vm.currencyCode}}"></mx-currency>
+	 */
+	angular.module('mx.components').directive('mxCurrency', function () {
+		var directive = new mx.components.FormControlBase(MxCurrencyController, 'mx-currency/mx-currency.html');
+		angular.extend(directive.bindToController, {
+			currencyCode: '@'
+		});
+		return directive;
+	});
 })();
 
 (function () {
@@ -9931,6 +9931,48 @@ angular.module('mx.components', [
 
 	/**
 	 * @ngdoc directive
+	 * @name mx.components:mxButton
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @scope {}
+	 * @description Custom button directive
+	 * @param {string} label@ - Text to be displayed on button
+	 * @param {string} icon@ - Name of Material Design icon to be displayed on button
+	 * @param {string} styles@ - Styles to be applied to button <br /><i>Default: md-raised md-primary</i>
+	 * @param {bool} focused@ - If true, a button should have input focus when the page loads <br /><i>Default: false</i>
+	 * @param {function} click& - Button click handler
+	 * @param {boolean} isDisabled= - Specifies if button is disabled
+	 * @usage <mx-button click='clickFn' label='A button' icon='check' focused='false' styles='btn-style'></mx-button>
+	 */
+	angular.module('mx.components').directive('mxButton', function () {
+		MxButtonCtrl.$inject = [];
+
+		function MxButtonCtrl() {
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				label: '@',
+				icon: '@',
+				styles: '@',
+				click: '&',
+				focused: '@',
+				isDisabled: '='
+			},
+			controller: MxButtonCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-button/mx-button.html'
+		};
+	});
+})();
+
+(function () {
+	'use strict';
+
+	/**
+	 * @ngdoc directive
 	 * @name mx.components:mxBottomSheet
 	 * @module mx.components
 	 * @restrict 'E'
@@ -10072,48 +10114,6 @@ angular.module('mx.components', [
 				link: link
 			};
 		}]);
-})();
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxButton
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @scope {}
-	 * @description Custom button directive
-	 * @param {string} label@ - Text to be displayed on button
-	 * @param {string} icon@ - Name of Material Design icon to be displayed on button
-	 * @param {string} styles@ - Styles to be applied to button <br /><i>Default: md-raised md-primary</i>
-	 * @param {bool} focused@ - If true, a button should have input focus when the page loads <br /><i>Default: false</i>
-	 * @param {function} click& - Button click handler
-	 * @param {boolean} isDisabled= - Specifies if button is disabled
-	 * @usage <mx-button click='clickFn' label='A button' icon='check' focused='false' styles='btn-style'></mx-button>
-	 */
-	angular.module('mx.components').directive('mxButton', function () {
-		MxButtonCtrl.$inject = [];
-
-		function MxButtonCtrl() {
-		}
-
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				label: '@',
-				icon: '@',
-				styles: '@',
-				click: '&',
-				focused: '@',
-				isDisabled: '='
-			},
-			controller: MxButtonCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-button/mx-button.html'
-		};
-	});
 })();
 
 (function (w) {
@@ -14535,9 +14535,9 @@ $templateCache.put("mx-datasource-paging-panel/mx-datasource-paging-panel.html",
 $templateCache.put("mx-date-picker/mx-date-picker.html","<div><md-input-container class=\"md-input-has-value\" ng-class=\"{\'md-input-focused\': vm.isFocused}\" ng-show=\"vm.model || vm.isFocused\"><label><span ng-bind-html=\"vm.label\"></span></label></md-input-container></div><md-datepicker name=\"{{::vm.internalName}}\" ng-model=\"vm.value\" ng-disabled=\"vm._disabled || vm._readOnly\" md-max-date=\"vm.maxDate\" md-min-date=\"vm.minDate\" ng-required=\"vm.ngRequired\" md-placeholder=\"{{::vm.label}}\"></md-datepicker><mx-control-errors></mx-control-errors>");
 $templateCache.put("mx-date-picker/mx-date-time-control.html","<time-date-picker ng-model=\"vm.model\" on-cancel=\"vm.onCancel()\" on-save=\"vm.onSave()\" display-twentyfour=\"true\" mindate=\"{{vm.minDate}}\" maxdate=\"{{vm.maxDate}}\" orientation=\"{{:: vm.displayMode !== \'full\'}}\" display-mode=\"{{:: vm.displayMode}}\"></time-date-picker>");
 $templateCache.put("mx-date-picker/mx-date-time-picker.html","<div type=\"button\" class=\"md-datetimepicker-input-container\" ng-click=\"vm.openCalendarPane($event)\" flex=\"\" layout=\"row\" ng-disabled=\"vm._disabled\" aria-label=\"{{::vm.dateLocale.msgOpenCalendar}}\" ng-class=\"{\'mx-datetimepicker-disabled\': vm._disabled }\"><md-input-container flex=\"\"><label>{{:: vm.label}}</label><md-icon md-svg-icon=\"md-calendar\"></md-icon><input ng-model=\"vm._formatedValue\" readonly=\"true\" ng-disabled=\"vm._disabled\" ng-required=\"vm.ngRequired\"></md-input-container><mx-control-errors track-internal=\"{{::vm.trackInternal}}\"></mx-control-errors><div class=\"md-datepicker-expand-triangle-wrap\"><div class=\"md-datepicker-expand-triangle\"></div></div></div><div class=\"md-datepicker-calendar-pane md-whiteframe-z1\"><div class=\"md-datepicker-calendar\"><mx-date-time-control ng-model=\"vm.value\" min-date=\"{{vm.minDate}}\" max-date=\"{{vm.maxDate}}\" md-date-filter=\"vm.dateFilter\" on-cancel=\"vm.onCancel()\" on-save=\"vm.onSave()\" display-mode=\"{{vm.displayMode}}\"></mx-date-time-control></div></div>");
+$templateCache.put("mx-dropdown/mx-dropdown.html","<md-button ng-if=\"vm.hideButton !== \'true\'\" class=\"md-icon-button mx-dropdown-action-list-open-button\" ng-click=\"vm.handleBtnClick($event)\"><md-icon>{{::vm.icon}}</md-icon></md-button><md-whiteframe ng-if=\"vm.expanded\" class=\"md-whiteframe-z3 mx-dropdown-list-wrap\" ng-class=\"{\'mx-dropdown-expanded\': vm.expanded}\"><md-list class=\"mx-dropdown-list\"><md-list-item class=\"mx-dropdown-item {{::item.htmlClass}}\" ng-repeat=\"item in vm.items\" ng-click=\"vm.handleClick($event, item)\"><md-icon ng-if=\"item.icon\" class=\"mx-dropdown-item-icon\">{{::item.icon}}</md-icon><p class=\"mx-dropdown-item-label\">{{::item.label}}</p></md-list-item></md-list></md-whiteframe>");
 $templateCache.put("mx-feedback/mx-feedback-tag.html","<svg version=\"1.1\" id=\"feedbackIcon\" class=\"feedbackIcon\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"0px\" y=\"0px\" width=\"30px\" height=\"30px\" viewbox=\"0 0 30 30\" enable-background=\"new 0 0 30 30\" xml:space=\"preserve\"><g><path class=\"svg-m42-orange\" d=\"M26,13.9c0.2-0.2,0.5-0.2,0.7,0l0.3,0.3V0.5C27,0.2,26.8,0,26.5,0h-26C0.2,0,0,0.2,0,0.5v18 C0,18.8,0.2,19,0.5,19H5v4c0,0.2,0.1,0.4,0.3,0.4c0.1,0,0.1,0.1,0.2,0.1c0.1,0,0.2,0,0.3-0.1l5.9-4.4h9.2L26,13.9z\"></path><path class=\"svg-m42-orange\" d=\"M29.9,18.4L27,15.6v0l-0.7-0.7l-2.5,2.5l3.9,3.9l2.2-2.2c0.1-0.1,0.1-0.2,0.1-0.4S29.9,18.5,29.9,18.4z\"></path><path class=\"svg-m42-orange\" d=\"M15.1,29.4c-0.1,0.2,0,0.4,0.1,0.5c0.1,0.1,0.2,0.1,0.4,0.1c0,0,0.1,0,0.1,0l4.1-1.2l-3.6-3.6L15.1,29.4z\"></path><polygon class=\"svg-m42-orange\" points=\"22.3,19 22.3,19 16.9,24.4 20.7,28.2 27,22 23.1,18.2\"></polygon></g><rect x=\"6\" y=\"8\" class=\"svg-m42-petrol\" width=\"3\" height=\"3\"></rect><rect x=\"12\" y=\"8\" class=\"svg-m42-petrol\" width=\"3\" height=\"3\"></rect><rect x=\"18\" y=\"8\" class=\"svg-m42-petrol\" width=\"3\" height=\"3\"></rect></svg>");
 $templateCache.put("mx-feedback/mx-feedback.html","<div class=\"panel-btn feedback-btn\" ng-attr-tooltip=\"{{::vm.internationalization.iconAlt}}\" tooltip-append-to-body=\"true\" tooltip-placement=\"bottom\" tooltip-html=\"true\" ng-click=\"vm.toggleDialog(); $event.stopPropagation();\"><span class=\"feedback-menu__title\"><md-icon class=\"feedback__icon\" md-svg-src=\"mx-feedback/mx-feedback-tag.html\"></md-icon></span></div><md-whiteframe ng-if=\"vm.dialogActive\" class=\"feedback__dialog md-whiteframe-z5\" layout=\"\" layout-align=\"center center\" data-html2canvas-ignore=\"\" ng-style=\"{\'top\': vm.topOffset}\"><div class=\"dialog__tag-back\"></div><div class=\"dialog__tag-front\"></div><div class=\"dialog__content\"><div class=\"dialog-header\"><h2>{{::vm.internationalization.dialogTitle}}</h2><div class=\"description\">{{::vm.internationalization.titleDescription}} <a target=\"_blank\" ng-href=\"{{::vm.internationalization.policyLink}}\">{{::vm.internationalization.policy}}</a> {{::vm.internationalization.titleDescription2}}</div><small class=\"dialog-header__hint\">{{::vm.internationalization.hintNoTicketCreated}}</small></div><div class=\"dialog-container\"><label class=\"rating-title\">{{::vm.internationalization.rating}}</label><md-slider id=\"feedback-rating-slider\" flex=\"\" class=\"feedback__md-rating\" md-discrete=\"\" ng-model=\"vm.feedback.Rating\" step=\"1\" min=\"1\" max=\"5\" aria-label=\"rating\"></md-slider><div class=\"feedback__md-rating__left\">{{::vm.internationalization.awful }}</div><div class=\"feedback__md-rating__right\">{{::vm.internationalization.excellent }}</div><md-input-container flex=\"\" md-is-error=\"vm.errors.feedbackError\" class=\"feedback__description\"><label class=\"feedback__description--placeholder\">{{::vm.internationalization.comment }}</label> <textarea ng-model=\"vm.feedback.Description\" rows=\"5\"></textarea><div ng-messages=\"vm.errors\"><div ng-message=\"feedbackError\">{{vm.validationError}}</div></div></md-input-container><div class=\"feedback__attachment hide-xs hide-sm\"><div class=\"feedback__attachment-switcher\"><md-checkbox ng-model=\"vm.feedback.AttachScreen\" class=\"material-checkbox\" aria-label=\"{{::vm.internationalization.screen }}\">{{ ::vm.internationalization.screen }}</md-checkbox></div><div class=\"feedback__attachment-preview\" ng-show=\"vm.showPreview\"><img mx-image-preview=\"\"></div></div><div class=\"dialog__footer\" layout=\"row\" layout-align=\"end center\"><md-button class=\"md-raised md-primary mx-close-button\" ng-click=\"vm.toggleDialog()\">{{::vm.internationalization.close }}</md-button><md-button class=\"md-raised md-primary\" ng-click=\"vm.sendFeedback(vm.feedback)\" ng-disabled=\"vm.sendFeedbackSendBtnDisabled\">{{::vm.internationalization.button}}</md-button></div></div></div></md-whiteframe>");
-$templateCache.put("mx-dropdown/mx-dropdown.html","<md-button ng-if=\"vm.hideButton !== \'true\'\" class=\"md-icon-button mx-dropdown-action-list-open-button\" ng-click=\"vm.handleBtnClick($event)\"><md-icon>{{::vm.icon}}</md-icon></md-button><md-whiteframe ng-if=\"vm.expanded\" class=\"md-whiteframe-z3 mx-dropdown-list-wrap\" ng-class=\"{\'mx-dropdown-expanded\': vm.expanded}\"><md-list class=\"mx-dropdown-list\"><md-list-item class=\"mx-dropdown-item {{::item.htmlClass}}\" ng-repeat=\"item in vm.items\" ng-click=\"vm.handleClick($event, item)\"><md-icon ng-if=\"item.icon\" class=\"mx-dropdown-item-icon\">{{::item.icon}}</md-icon><p class=\"mx-dropdown-item-label\">{{::item.label}}</p></md-list-item></md-list></md-whiteframe>");
 $templateCache.put("mx-file-uploader/mx-file-uploader.html","<div class=\"file-selector__container\"><ul><li ng-repeat=\"file in vm.files\"><p>&nbsp;{{file.name}}</p><p class=\"file-selector__remove-btn\" ng-click=\"vm.removeFile(file)\">X</p></li></ul><md-button class=\"md-fab md-mini\" aria-label=\"Attach a file\" ngf-select=\"\" ngf-change=\"vm.filesSelected($files, $event)\" ngf-multiple=\"true\"><md-tooltip>{{\'components.mx-file-uploader.attachFileHint\' | mxi18n}}</md-tooltip><md-icon md-svg-src=\"mxComponents:attachment\"></md-icon></md-button></div>");
 $templateCache.put("mx-form/mx-form.html","<ng-form name=\"{{::vm.name}}\" ng-transclude=\"\"></ng-form>");
 $templateCache.put("mx-form-errors/mx-form-errors.html","<div layout=\"row\" ng-class=\"{ \'noerrors\': !vm.errorMessage, \'mx-form-errors--info\': vm.errorMessage.type === \'info\', \'mx-form-errors--warning\': vm.errorMessage.type === \'warning\' }\" class=\"mx-form-errors\"><div layout=\"column\"><i class=\"material-icons\" style=\"color: white;\">{{vm.errorMessage.type}}</i></div><div layout=\"row\" flex=\"\" class=\"errorMessage\" ng-bind-html=\"vm.errorMessage.message\"></div><div layout=\"column\"><div><i class=\"material-icons iconButton\" ng-show=\"vm.prevExists\" ng-click=\"vm.prevError()\" title=\"Previous\">keyboard_arrow_left</i> <i class=\"material-icons iconButton\" ng-show=\"vm.nextExists\" ng-click=\"vm.nextError()\" title=\"Next\">keyboard_arrow_right</i></div></div></div>");
@@ -14552,11 +14552,11 @@ $templateCache.put("mx-grid/mx-grid.html","<div><div ng-if=\"grid.options.enable
 $templateCache.put("mx-icon-picker/mx-icon-picker.html","<div class=\"mx-icon-picker\" ng-class=\"{\'mx-icon-picker--empty\': !vm.model}\" ng-click=\"vm.innerClick($event)\"><md-input-container md-is-error=\"vm.controlNgModel.mxInvalid\"><label><span ng-bind-html=\"::vm.label\"></span></label> <span class=\"mx-icon-picker--icon-border\" ng-click=\"vm.activate($event)\"><md-icon ng-show=\"vm.icon\" class=\"mx-icon-picker--icon\">{{vm.icon}}</md-icon></span><md-icon ng-show=\"!vm._readOnly && !vm._disabled && vm.model\" class=\"mx-icon-picker--clear\" ng-click=\"vm.clear($event)\">clear</md-icon><input name=\"{{::vm.internalName}}\" ng-model=\"vm.text\" ng-disabled=\"vm._disabled\" class=\"mx-icon-picker--input\" ng-focus=\"vm.activate()\" ng-readonly=\"vm._readOnly\" ng-pattern=\"vm.pattern\"><mx-control-errors track-internal=\"{{::vm.trackInternal}}\"></mx-control-errors></md-input-container><div class=\"mx-icon-picker--library md-whiteframe-1dp\" ng-class=\"{\'mx-icon-picker--library__active\': vm.active}\"><div ng-show=\"!vm.itemsFound\" class=\"layout-column mx-icon-picker--library__empty-search\"><md-icon>block</md-icon><h4 flex=\"\">{{\'components.common.noData\' | mxi18n}}</h4></div><div ng-repeat=\"category in vm.library\" class=\"mx-icon-picker--library-category\" ng-show=\"category.visible\"><h3>{{::category.name}}</h3><div ng-repeat=\"item in category.icons track by item.icon.id\" title=\"{{::item.icon.name}}\" ng-click=\"vm.apply($event, item.icon)\" class=\"mx-icon-picker--library-icon\" ng-show=\"item.visible\"><md-icon>{{::item.icon.id}}</md-icon><span>{{::item.icon.name}}</span></div></div></div></div>");
 $templateCache.put("mx-image-preview/mx-image-preview.html","<md-dialog aria-label=\"Image preview\" style=\"max-width: inherit;max-height: inherit;\"><md-content class=\"sticky-container\"><md-subheader class=\"md-sticky-no-effect\">{{\'components.mx-image-preview.title\' | mxi18n : \'Image preview\'}}</md-subheader><div class=\"dialog-content\"><img mx-lightbox-src=\"{{Lightbox.imageUrl}}\" alt=\"\"></div></md-content><div class=\"md-actions\" layout=\"row\"><md-button class=\"md-raised md-primary\" ng-click=\"Lightbox.cancel()\">{{\'components.mx-image-preview.close\' | mxi18n : \'Close\'}}</md-button></div></md-dialog>");
 $templateCache.put("mx-journal/mx-journal.html","<div class=\"journal-container\"><div class=\"journal-container--items\"><div ng-repeat=\"item in vm.items\" class=\"journal-item\" layout=\"column\" ng-class=\"{ \'journal-item--my\':item.__my, \'journal-item--first\':item.__first }\"><div><div class=\"journal-item__user\"><div layout=\"row\"><div ng-init=\"userPhoto = item.photo\"><img ng-show=\"userPhoto\" ng-src=\"{{::userPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!userPhoto\" class=\"journal-item__photo-letter journal-item__photo\">{{::item.userName | limitTo:1}}</span></div><div class=\"journal-item__user-name\" flex=\"\">{{::item.userName}}</div></div></div><div class=\"journal-item__date\">{{::item.__created | date:\'medium\'}}</div></div><div class=\"journal-item__content\"><p ng-bind-html=\"item.text\"></p></div></div><div class=\"journal-container--load-more\" ng-show=\"vm.canLoadMore && !vm.processingItems\"><md-button ng-click=\"vm.loadMoreItems()\">{{\'components.journal.load_more_items\' | mxi18n}}</md-button></div><div class=\"journal-container--load-more\" ng-show=\"vm.processingItems\">{{\'components.journal.loading\' | mxi18n}}</div></div><div class=\"journal-item--new journal-item\" ng-if=\"!vm.readOnly\"><div ng-init=\"myPhoto = vm.currentUserPhoto\" class=\"journal-item__photo-wrapper\"><img ng-show=\"myPhoto\" ng-src=\"{{::myPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!myPhoto\" class=\"journal-item__photo-letter journal-item__photo\">Y</span></div><div ng-if=\"vm._showRichEditor\"><mx-rich-text-box class=\"journal-item--new-textarea\" ng-model=\"vm.newComment\" advanced-mode=\"false\" set-focus=\"true\" on-blur=\"vm._handleRichTextBoxBlur()\"></mx-rich-text-box><md-button class=\"journal-item--new__content-button\" ng-click=\"vm.addComment();\" title=\"{{\'components.journal.send_button_label\' | mxi18n}}\" ng-disabled=\"vm.adding || vm.newComment===\'\' && vm.attachments.length === 0\" aria-label=\"{{\'components.journal.send_button_label\' | mxi18n}}\">{{\'components.journal.send_button_label\' | mxi18n}}</md-button><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button></div><div ng-show=\"!vm._showRichEditor\" class=\"journal-item--new-textarea-placeholder\" ng-click=\"vm._showRichEditor = true;\"><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__preview-attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button>{{\'components.journal.write_your_comment\' | mxi18n}}</div><ul class=\"journal-item--new-attachments-list\"><li ng-repeat=\"file in vm.attachments\"><md-icon>insert_drive_file</md-icon>{{::file.DisplayString}}</li></ul></div></div>");
-$templateCache.put("mx-rating/mx-rating.html","<label>{{vm.label}}</label><div class=\"mx-rating\" ng-class=\"[vm._disabled ? \'mx-rating--disabled\' : \'\']\"><md-icon class=\"mx-rating--star\" ng-repeat=\"star in vm.stars\" ng-class=\"{\'mx-rating--star-filled\': star.filled }\" ng-click=\"vm.toggle($index)\">star</md-icon></div>");
 $templateCache.put("mx-numeric-edit/mx-numeric-edit.html","<md-input-container md-is-error=\"vm.controlNgModel.mxInvalid\"><label>{{vm.label}}</label> <input name=\"{{::vm.name}}\" mx-mask=\"{{::vm.format}}\" ng-model=\"vm.model\" ng-disabled=\"vm._disabled\" ng-readonly=\"vm._readOnly\"><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container>");
 $templateCache.put("mx-picker/mx-autocomplete.html","<md-autocomplete md-items=\"item in vm.autoCompleteSearch()\" md-search-text=\"vm.autoCompleteSearchText\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-item-text=\"vm.getTitle(item)\" md-no-cache=\"true\" md-floating-label=\"{{vm.label}}\" ng-disabled=\"vm._disabled || vm._readOnly\" md-min-length=\"0\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\"><md-item-template><span md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}</span></md-not-found><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-autocomplete>");
 $templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\"><md-input-container ng-class=\"{ \'disabled\': vm._disabled, \'readonly\': vm._readOnly }\"><md-chips md-autocomplete-snap=\"\" md-on-add=\"vm.onSelectionChange()\" md-on-remove=\"vm.onSelectionChange()\" md-require-match=\"true\" ng-model=\"vm.selectedItems\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete md-floating-label=\"{{ vm.controlLabel }}\" input-name=\"{{::vm.internalName}}\" md-delay=\"vm.loadDelay\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-item-text=\"vm.getTitle(item)\" md-items=\"item in vm.autoCompleteSearch()\" md-menu-class=\"mx-picker-item-template {{::vm.dropdownHtmlClass}}\" md-min-length=\"0\" md-autoselect=\"true\" md-no-cache=\"true\" md-search-text=\"vm.autoCompleteSearchText\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-select-on-match=\"true\" md-match-case-insensitive=\"true\" spellcheck=\"false\"><md-item-template><span class=\"item-title\"><span md-highlight-flags=\"^i\" md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span> <span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
 $templateCache.put("mx-picker/mx-select.html","<md-input-container><label>{{vm.label}}</label><md-select ng-model-options=\"{ trackBy: \'vm.getTrackingValue($value)\' }\" ng-model=\"vm.selectModel\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-readonly=\"vm._readOnly\"><md-option ng-value=\"vm.getId(item)\" ng-repeat=\"item in vm.items\">{{vm.getTitle(item)}}</md-option></md-select><mx-control-errors></mx-control-errors></md-input-container>");
+$templateCache.put("mx-rating/mx-rating.html","<label>{{vm.label}}</label><div class=\"mx-rating\" ng-class=\"[vm._disabled ? \'mx-rating--disabled\' : \'\']\"><md-icon class=\"mx-rating--star\" ng-repeat=\"star in vm.stars\" ng-class=\"{\'mx-rating--star-filled\': star.filled }\" ng-click=\"vm.toggle($index)\">star</md-icon></div>");
 $templateCache.put("mx-repeater/mx-repeater.html","<div class=\"mx-repeater\" flex=\"\"><div flex=\"\" class=\"mx-repeater--row\" ng-repeat=\"item in __$vm.entities\"><div class=\"mx-repeater--panel\" flex=\"\" ng-include=\"\" src=\"__$vm.templateId\" data-onload=\"__$vm.initScope()\"></div></div></div>");
 $templateCache.put("mx-rich-text-box/mx-rich-text-box.html","<md-input-container class=\"md-input-has-value\"><label><span ng-bind-html=\"::vm.label\"></span></label><div class=\"mx-tinymce-container\"><div ng-model=\"vm.model\" ui-tinymce=\"vm.tinymceOptions\"></div><mx-control-errors></mx-control-errors></div></md-input-container>");
 $templateCache.put("mx-tabs/mx-tabs.html","<md-tabs md-dynamic-height=\"\" md-border-bottom=\"\" class=\"mx-tabs\"><md-tab layout=\"row\" class=\"flex\" ng-repeat=\"__$tab in __$vm.tabs | orderBy: \'position\'\"><md-tab-label><div class=\"layout-row\"><span>{{__$tab.title}}</span> <span class=\"mx-tabs--label-count\" ng-show=\"__$tab.count && __$tab.count.length\">{{__$tab.count.length}}</span></div></md-tab-label><md-tab-body><div ng-include=\"\" src=\"__$tab.id\" data-onload=\"__$vm.initScope()\"></div></md-tab-body></md-tab></md-tabs>");
