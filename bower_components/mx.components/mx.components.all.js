@@ -716,6 +716,69 @@ angular.module('mx.components', [
 	w.mx.internationalization.Namespace = mxi18nNamespace;
 })(window);
 
+(function (w) {
+	'use strict';
+
+	MxTextBoxCtrl.$inject = ['mx.internationalization', '$element', '$timeout'];
+
+	function MxTextBoxCtrl(internationalization, $element, $timeout) {
+		mx.components.FormControlControllerBase.call(this, internationalization, $timeout);
+		var vm = this;
+		vm.type = vm.type || 'text';
+		vm.trackInternal = vm.type !== 'text' && vm.type !== 'password';
+
+		var input = $element.find('input');
+		if (input) {
+			input.on('blur', function() {
+				$element.blur();
+				vm.showingHints(false);
+			});
+			input.on('focus', function() {
+				$element.triggerHandler('focus');
+				vm.showingHints(true);
+			});
+		}
+
+		return vm;
+	}
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxTextBox
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @description
+	 * The mx-text-box control is used to create a text box where the user can input text.
+	 *
+	 * The example below demonstrates some of the attributes you may use with the TextBox control:
+	 * @param {string} name@ - The name property sets or returns the value of the name attribute of a mxTextBox.
+	 * @param {string} label@ - Defines label displayed on the form
+	 * @param {boolean} required= - The required property sets or returns whether a mxTextBox must be filled out before submitting a form.
+	 * @param {boolean} disabled= - The disabled property sets or returns whether a mxTextBox should be disabled, or not.
+	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
+	 * @param {object} model=ngModel - directive binds element to the object in the model.
+	 * @param {string} type="email" - <a href="https://docs.angularjs.org/api/ng/input/input[email]">E-mail directive</a>
+	 * @param {string} ngPattern - <a href="https://docs.angularjs.org/api/ng/directive/ngPattern">ngPattern</a>
+	 *
+	 * @usage <mx-text-box ng-model="vm.inputData" data-label="mixed" data-read-only="true" data-disabled="true" data-required="true" data-name="readOnly" ng-pattern="regex"></mx-text-box>
+	 */
+	angular.module('mx.components').directive('mxTextBox', function () {
+		var directive = new mx.components.FormControlBase(MxTextBoxCtrl, 'mx-text-box/mx-text-box.html');
+		angular.extend(directive.bindToController,
+			{
+				type: '@',
+				pattern:'='
+			});
+		return directive;
+	});
+
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.Forms = w.mx.components.Forms || {};
+})(window);
+
+
 (function () {
 	'use strict';
 
@@ -879,69 +942,6 @@ angular.module('mx.components', [
 	});
 
 })();
-
-(function (w) {
-	'use strict';
-
-	MxTextBoxCtrl.$inject = ['mx.internationalization', '$element', '$timeout'];
-
-	function MxTextBoxCtrl(internationalization, $element, $timeout) {
-		mx.components.FormControlControllerBase.call(this, internationalization, $timeout);
-		var vm = this;
-		vm.type = vm.type || 'text';
-		vm.trackInternal = vm.type !== 'text' && vm.type !== 'password';
-
-		var input = $element.find('input');
-		if (input) {
-			input.on('blur', function() {
-				$element.blur();
-				vm.showingHints(false);
-			});
-			input.on('focus', function() {
-				$element.triggerHandler('focus');
-				vm.showingHints(true);
-			});
-		}
-
-		return vm;
-	}
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxTextBox
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @description
-	 * The mx-text-box control is used to create a text box where the user can input text.
-	 *
-	 * The example below demonstrates some of the attributes you may use with the TextBox control:
-	 * @param {string} name@ - The name property sets or returns the value of the name attribute of a mxTextBox.
-	 * @param {string} label@ - Defines label displayed on the form
-	 * @param {boolean} required= - The required property sets or returns whether a mxTextBox must be filled out before submitting a form.
-	 * @param {boolean} disabled= - The disabled property sets or returns whether a mxTextBox should be disabled, or not.
-	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
-	 * @param {object} model=ngModel - directive binds element to the object in the model.
-	 * @param {string} type="email" - <a href="https://docs.angularjs.org/api/ng/input/input[email]">E-mail directive</a>
-	 * @param {string} ngPattern - <a href="https://docs.angularjs.org/api/ng/directive/ngPattern">ngPattern</a>
-	 *
-	 * @usage <mx-text-box ng-model="vm.inputData" data-label="mixed" data-read-only="true" data-disabled="true" data-required="true" data-name="readOnly" ng-pattern="regex"></mx-text-box>
-	 */
-	angular.module('mx.components').directive('mxTextBox', function () {
-		var directive = new mx.components.FormControlBase(MxTextBoxCtrl, 'mx-text-box/mx-text-box.html');
-		angular.extend(directive.bindToController,
-			{
-				type: '@',
-				pattern:'='
-			});
-		return directive;
-	});
-
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.Forms = w.mx.components.Forms || {};
-})(window);
-
 
 (function () {
 	'use strict';
@@ -6071,6 +6071,247 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxJournal
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @description
+	 * The mxJournal control provides simple journal functionality.
+	 *
+	 * The example below demonstrates some of the attributes you may use with the Journal control:
+	 * @param {string} itemsPerPage@ - How many items should be shown at once
+	 * @param {string} currentUserId@ - current user identifier
+	 * @param {string} currentUserPhoto@ - current user avatar image
+	 * @param {expression} onGetData& - Callback function to load journal items
+	 * @param {expression} onAdd& - Callback function to add new comment
+	 * @param {expression} attachFilesHandler& - if set then files attaching functionality will be enabled.
+	 * 			It expects a function that returns a promise,
+	 *			result of which is an array of file objects that have at least a key "DisplayString".
+	 *			Example: [
+	 *				{DisplayString: "file1.txt", url: "path/to/file/file1.txt"},
+	 *				{DisplayString: "file2.pdf", url: "path/to/file/file2.pdf"},
+	 *				...
+	 *			];
+	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
+	 *
+	 * @usage:
+	 *	 	<mx-journal
+	 *			on-add="vm.addComment()"
+	 *			on-get-data="vm.getData()"
+	 *			read-only="false"
+	 *			data-disabled="true"
+	 *			current-user-id="12345"
+	 *			items-per-page="5">
+	 *		</mx-journal>
+	 */
+	angular.module('mx.components').directive('mxJournal', function () {
+
+		MxJournalCtrl.$inject = [
+			'$q',
+			'$timeout',
+			'$scope',
+			'$element',
+			'mx.internationalization',
+			'mx.shell.NotificationService'
+		];
+
+		function MxJournalCtrl(
+			$q,
+			$timeout,
+			$scope,
+			$element,
+			internationalization,
+			notificationService
+		) {
+			var vm = this;
+
+			vm.processingItems = false;
+			vm.canLoadMore = false;
+			vm._showRichEditor = false;
+
+			var itemsPerPage = vm.itemsPerPage ? parseInt(vm.itemsPerPage, 10) : 10;
+
+			vm.loadMoreItems = loadMoreItems;
+
+			vm.newComment = '';
+			vm.addComment = addComment;
+
+			vm._attachingInProgress = false;
+			vm._useFileAttachments = !!$($element).attr('attach-files-handler');
+			vm.attachments = [];
+			vm.attachFiles = attachFiles;
+			vm._handleRichTextBoxBlur = _handleRichTextBoxBlur;
+
+			vm.readOnly = !!vm.readOnly;
+
+			vm.items = [];
+
+			reload();
+
+			$scope.$watch('vm._showRichEditor', function () {
+				if (vm._showRichEditor) {
+					// scroll down on editor activated if there are scrollbar
+					$timeout(function () {
+						var parent = $element[0];
+						while (parent && !_hasScrollBar(parent) && parent.tabName !== 'BODY') {
+							parent = parent.parentElement;
+						}
+						if (parent && parent.tabName !== 'BODY') {
+							$(parent).animate({
+								scrollTop: parent.scrollTop + 110 + 'px'
+							}, 600);
+						}
+					}, 200);
+				}
+			});
+
+			return vm;
+
+			function reload() {
+				vm.newComment = '';
+				vm.attachments = [];
+				getJournalEntries(true);
+			}
+
+			function finishProcessingItems() {
+				vm.processingItems = false;
+			}
+
+			function loadMoreItems() {
+				if (vm.processingItems || !vm.canLoadMore) {
+					return;
+				}
+				getJournalEntries(false);
+			}
+
+			function getJournalEntries(reload) {
+				vm.canLoadMore = false;
+				vm.processingItems = true;
+				var start = 0;
+				if (!reload) {
+					start = vm.items.length;
+				}
+				$q.when(vm.onGetData({start: start, count: itemsPerPage + 1})).then(function (data) {
+					data = data || [];
+					var moreItemsExists = data.length === itemsPerPage + 1;
+					if (moreItemsExists) {
+						data.pop();
+					}
+
+					data.forEach(function (item) {
+						item.__my = item.userId === vm.currentUserId;
+						item.__created = new Date(item.created);
+
+					});
+					var items = null;
+					if (reload) {
+						items = data;
+					} else {
+						items = vm.items;
+						for (var i = 0; i < data.length; i++) {
+							items.push(data[i]);
+						}
+					}
+					if (items && items.length) {
+						items.forEach(function (item) {
+							item.__my = item.userId === vm.currentUserId;
+						});
+						vm.items = items;
+					}
+					vm.canLoadMore = moreItemsExists;
+				})
+				.finally(function () {
+					finishProcessingItems();
+				});
+			}
+
+			function addComment() {
+				if (!vm.newComment && vm.attachments.length === 0) {
+					return;
+				}
+				vm.adding = true;
+				$q.when(vm.onAdd({
+					text: vm.newComment,
+					attachments: vm.attachments
+				}))
+				.then(function () {
+					reload();
+					$timeout(function () {
+						vm._showRichEditor = false;
+					}, 100);
+				}, function (error) {
+					notificationService.error(
+						internationalization.get('components.journal.adding_error') +
+						(error && error.statusText ? ': ' + error.statusText : '')
+					);
+				})
+				.finally(function () {
+					vm.adding = false;
+				});
+			}
+
+			function attachFiles() {
+				vm._attachingInProgress = true;
+				$q.when(vm.attachFilesHandler())
+				.then(function (result) {
+					var _fileNamesList = vm.attachments.map(function (file) {
+						return file.DisplayString;
+					});
+					result.selectedObjects.forEach(function (file) {
+						if (_fileNamesList.indexOf(file.DisplayString) === -1) {
+							vm.attachments.push(file);
+						}
+					});
+				})
+				.finally(function () {
+					vm._attachingInProgress = false;
+				});
+			}
+
+			function _hasScrollBar(el) {
+				var result = false;
+				if (el) {
+					result = !!el.scrollTop;
+					if (!result) {
+						el.scrollTop = 1;
+						result = !!el.scrollTop;
+						el.scrollTop = 0;
+					}
+					result = result && $(el).css('overflow-y') !== 'hidden';
+				}
+				return result;
+			}
+
+			function _handleRichTextBoxBlur() {
+				$timeout(function () {
+					vm._showRichEditor = vm.newComment!=='' || vm.attachments.length > 0 || vm._attachingInProgress;
+				}, 100);
+			}
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				itemsPerPage: '@',
+				onGetData: '&',
+				onAdd: '&',
+				attachFilesHandler: '&',
+				currentUserId: '@',
+				currentUserPhoto: '@',
+				readOnly: '='
+			},
+			controller: MxJournalCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-journal/mx-journal.html'
+		};
+	});
+})();
+
+(function () {
+	'use strict';
+
 	angular.module('mx.components')
 		.directive('mxImagePreview', [
 			'$rootScope',
@@ -6625,247 +6866,6 @@ angular.module('mx.components', [
 				}
 			};
 		}]);
-})();
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxJournal
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @description
-	 * The mxJournal control provides simple journal functionality.
-	 *
-	 * The example below demonstrates some of the attributes you may use with the Journal control:
-	 * @param {string} itemsPerPage@ - How many items should be shown at once
-	 * @param {string} currentUserId@ - current user identifier
-	 * @param {string} currentUserPhoto@ - current user avatar image
-	 * @param {expression} onGetData& - Callback function to load journal items
-	 * @param {expression} onAdd& - Callback function to add new comment
-	 * @param {expression} attachFilesHandler& - if set then files attaching functionality will be enabled.
-	 * 			It expects a function that returns a promise,
-	 *			result of which is an array of file objects that have at least a key "DisplayString".
-	 *			Example: [
-	 *				{DisplayString: "file1.txt", url: "path/to/file/file1.txt"},
-	 *				{DisplayString: "file2.pdf", url: "path/to/file/file2.pdf"},
-	 *				...
-	 *			];
-	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
-	 *
-	 * @usage:
-	 *	 	<mx-journal
-	 *			on-add="vm.addComment()"
-	 *			on-get-data="vm.getData()"
-	 *			read-only="false"
-	 *			data-disabled="true"
-	 *			current-user-id="12345"
-	 *			items-per-page="5">
-	 *		</mx-journal>
-	 */
-	angular.module('mx.components').directive('mxJournal', function () {
-
-		MxJournalCtrl.$inject = [
-			'$q',
-			'$timeout',
-			'$scope',
-			'$element',
-			'mx.internationalization',
-			'mx.shell.NotificationService'
-		];
-
-		function MxJournalCtrl(
-			$q,
-			$timeout,
-			$scope,
-			$element,
-			internationalization,
-			notificationService
-		) {
-			var vm = this;
-
-			vm.processingItems = false;
-			vm.canLoadMore = false;
-			vm._showRichEditor = false;
-
-			var itemsPerPage = vm.itemsPerPage ? parseInt(vm.itemsPerPage, 10) : 10;
-
-			vm.loadMoreItems = loadMoreItems;
-
-			vm.newComment = '';
-			vm.addComment = addComment;
-
-			vm._attachingInProgress = false;
-			vm._useFileAttachments = !!$($element).attr('attach-files-handler');
-			vm.attachments = [];
-			vm.attachFiles = attachFiles;
-			vm._handleRichTextBoxBlur = _handleRichTextBoxBlur;
-
-			vm.readOnly = !!vm.readOnly;
-
-			vm.items = [];
-
-			reload();
-
-			$scope.$watch('vm._showRichEditor', function () {
-				if (vm._showRichEditor) {
-					// scroll down on editor activated if there are scrollbar
-					$timeout(function () {
-						var parent = $element[0];
-						while (parent && !_hasScrollBar(parent) && parent.tabName !== 'BODY') {
-							parent = parent.parentElement;
-						}
-						if (parent && parent.tabName !== 'BODY') {
-							$(parent).animate({
-								scrollTop: parent.scrollTop + 110 + 'px'
-							}, 600);
-						}
-					}, 200);
-				}
-			});
-
-			return vm;
-
-			function reload() {
-				vm.newComment = '';
-				vm.attachments = [];
-				getJournalEntries(true);
-			}
-
-			function finishProcessingItems() {
-				vm.processingItems = false;
-			}
-
-			function loadMoreItems() {
-				if (vm.processingItems || !vm.canLoadMore) {
-					return;
-				}
-				getJournalEntries(false);
-			}
-
-			function getJournalEntries(reload) {
-				vm.canLoadMore = false;
-				vm.processingItems = true;
-				var start = 0;
-				if (!reload) {
-					start = vm.items.length;
-				}
-				$q.when(vm.onGetData({start: start, count: itemsPerPage + 1})).then(function (data) {
-					data = data || [];
-					var moreItemsExists = data.length === itemsPerPage + 1;
-					if (moreItemsExists) {
-						data.pop();
-					}
-
-					data.forEach(function (item) {
-						item.__my = item.userId === vm.currentUserId;
-						item.__created = new Date(item.created);
-
-					});
-					var items = null;
-					if (reload) {
-						items = data;
-					} else {
-						items = vm.items;
-						for (var i = 0; i < data.length; i++) {
-							items.push(data[i]);
-						}
-					}
-					if (items && items.length) {
-						items.forEach(function (item) {
-							item.__my = item.userId === vm.currentUserId;
-						});
-						vm.items = items;
-					}
-					vm.canLoadMore = moreItemsExists;
-				})
-				.finally(function () {
-					finishProcessingItems();
-				});
-			}
-
-			function addComment() {
-				if (!vm.newComment && vm.attachments.length === 0) {
-					return;
-				}
-				vm.adding = true;
-				$q.when(vm.onAdd({
-					text: vm.newComment,
-					attachments: vm.attachments
-				}))
-				.then(function () {
-					reload();
-					$timeout(function () {
-						vm._showRichEditor = false;
-					}, 100);
-				}, function (error) {
-					notificationService.error(
-						internationalization.get('components.journal.adding_error') +
-						(error && error.statusText ? ': ' + error.statusText : '')
-					);
-				})
-				.finally(function () {
-					vm.adding = false;
-				});
-			}
-
-			function attachFiles() {
-				vm._attachingInProgress = true;
-				$q.when(vm.attachFilesHandler())
-				.then(function (result) {
-					var _fileNamesList = vm.attachments.map(function (file) {
-						return file.DisplayString;
-					});
-					result.selectedObjects.forEach(function (file) {
-						if (_fileNamesList.indexOf(file.DisplayString) === -1) {
-							vm.attachments.push(file);
-						}
-					});
-				})
-				.finally(function () {
-					vm._attachingInProgress = false;
-				});
-			}
-
-			function _hasScrollBar(el) {
-				var result = false;
-				if (el) {
-					result = !!el.scrollTop;
-					if (!result) {
-						el.scrollTop = 1;
-						result = !!el.scrollTop;
-						el.scrollTop = 0;
-					}
-					result = result && $(el).css('overflow-y') !== 'hidden';
-				}
-				return result;
-			}
-
-			function _handleRichTextBoxBlur() {
-				$timeout(function () {
-					vm._showRichEditor = vm.newComment!=='' || vm.attachments.length > 0 || vm._attachingInProgress;
-				}, 100);
-			}
-		}
-
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				itemsPerPage: '@',
-				onGetData: '&',
-				onAdd: '&',
-				attachFilesHandler: '&',
-				currentUserId: '@',
-				currentUserPhoto: '@',
-				readOnly: '='
-			},
-			controller: MxJournalCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-journal/mx-journal.html'
-		};
-	});
 })();
 
 (function (){
@@ -8392,54 +8392,6 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
-	angular.module('mx.components').directive('mxFileUploader', function () {
-
-		MxFileUploaderCtrl.$inject = [];
-
-		function MxFileUploaderCtrl() {
-			var vm = this;
-
-			vm.files = vm.files || [];
-
-			vm.filesSelected = filesSelected;
-			vm.removeFile = removeFile;
-
-			return vm;
-
-			function filesSelected(files) {
-				if (!files || !files.length) {
-					return;
-				}
-				for (var i = 0; i < files.length; i++) {
-					vm.files.push(files[i]);
-				}
-			}
-
-			function removeFile(file) {
-				var index = vm.files.indexOf(file);
-				if (index !== -1) {
-					vm.files.splice(index, 1);
-				}
-			}
-
-		}
-
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				files: '='
-			},
-			controller: MxFileUploaderCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-file-uploader/mx-file-uploader.html'
-		};
-	});
-})();
-
-(function () {
-	'use strict';
-
 	angular.module('mx.components').directive('mxFeedback', [
 		'$http',
 		'$templateCache',
@@ -8625,6 +8577,54 @@ angular.module('mx.components', [
 				link: link
 			};
 		}]);
+})();
+
+(function () {
+	'use strict';
+
+	angular.module('mx.components').directive('mxFileUploader', function () {
+
+		MxFileUploaderCtrl.$inject = [];
+
+		function MxFileUploaderCtrl() {
+			var vm = this;
+
+			vm.files = vm.files || [];
+
+			vm.filesSelected = filesSelected;
+			vm.removeFile = removeFile;
+
+			return vm;
+
+			function filesSelected(files) {
+				if (!files || !files.length) {
+					return;
+				}
+				for (var i = 0; i < files.length; i++) {
+					vm.files.push(files[i]);
+				}
+			}
+
+			function removeFile(file) {
+				var index = vm.files.indexOf(file);
+				if (index !== -1) {
+					vm.files.splice(index, 1);
+				}
+			}
+
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				files: '='
+			},
+			controller: MxFileUploaderCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-file-uploader/mx-file-uploader.html'
+		};
+	});
 })();
 
 (function () {
@@ -9931,154 +9931,6 @@ angular.module('mx.components', [
 
 	/**
 	 * @ngdoc directive
-	 * @name mx.components:mxBottomSheet
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @scope {}
-	 * @description Custom bottom sheet directive
-	 * @usage <mx-bottom-sheet
-	 *        top-offset='24px'
-	 *        options='{
-	 *			icon:'apps',
-	 *			displayMode: 'grid',
-	 *			controller: 'BottomSheetController'*
-	 * 		}'>
-	 * </mx-bottom-sheet>
-	 * @param {string} top-offset= The offset regarding top position of his parent element:
-	 * @param {object} options= An options object, with the following properties:
-	 *   - `icon`        - `{string=}`: The icon to associate with button showing this bottom sheet.
-	 *   - `displayMode`- `{string=}`: Represents one of two modes of displaying: 'grid' or 'list'.
-	 *   - `controller` - `{string=}`: The controller to associate with this bottom sheet.
-	 */
-	angular.module('mx.components').directive('mxBottomSheet', [
-		'$http',
-		'$templateCache',
-		'$compile',
-		'$mdBottomSheet',
-		'$q',
-		'$window',
-		'$mdUtil',
-		'mx.internationalization',
-		function ($http, $templateCache, $compile, $mdBottomSheet, $q, $window, $mdUtil, internationalization) {
-
-			function MxBottomSheetCtrl() {
-				var vm = this;
-				vm.dialogActive = false;
-				vm.toggleDialog = toggleDialog;
-				vm.executeItem = executeItem;
-				vm.focusItem = focusItem;
-				vm.closeBottomSheet = closeBottomSheet;
-
-				var window = angular.element($window);
-				window.on('click', function ($event) {
-					if (vm.dialogActive) {
-						vm.closeBottomSheet();
-						$event.stopPropagation();
-					}
-				});
-
-				return vm;
-
-				function closeBottomSheet() {
-					if (vm.dialogActive) {
-						// $mdBottomSheet.hide();
-						$mdUtil.nextTick($mdBottomSheet.cancel, true);
-						vm.dialogActive = false;
-					}
-				}
-
-				function toggleDialog(options) {
-					if (vm.dialogActive) {
-						vm.closeBottomSheet();
-					}
-					else {
-						var _templateUrl = 'mx-bottom-sheet/' + (options.displayMode === 'grid' ? 'mx-bottom-sheet-grid-template.html' : 'mx-bottom-sheet-list-template.html');
-
-						$mdBottomSheet.show({
-							templateUrl: _templateUrl,
-							controller: options.controller,
-							//disableBackdrop: true,
-							disableParentScroll: false,
-							parent: vm.parent,
-							controllerAs: 'vm',
-							bindToController: true,
-							locals: {
-								execute: vm.executeItem,
-								focus: vm.focusItem,
-								topOffset: vm.topOffset
-							}
-						});
-
-						vm.dialogActive = true;
-					}
-				}
-
-				function executeItem(item) {
-					vm.closeBottomSheet();
-
-					if (angular.isDefined(item) && angular.isFunction(item.execute)) {
-						item.execute();
-					}
-				}
-
-				function focusItem(item) {
-					if (angular.isDefined(item) && angular.isDefined(item.isFocused)) {
-						return item.isFocused;
-					}
-
-					return false;
-				}
-			}
-
-			function link(scope, element, attr, vm) {
-				element.addClass('bottom-sheet-control-container');
-
-				var isEnabled = vm.isEnabled();
-				if (angular.isUndefined(isEnabled)) {
-					isEnabled = true;
-				}
-				if (!isEnabled) {
-					return;
-				}
-				isEnabled = $q.when(isEnabled);
-				isEnabled.then(function (value) {
-					if (!value) {
-						return;
-					}
-					$http.get('mx-bottom-sheet/mx-bottom-sheet.html', {cache: $templateCache}).then(function (response) {
-						var template = $compile(response.data)(scope);
-						element.append(template);
-						load(scope);
-					});
-				});
-
-				function load() {
-					vm.internationalization = internationalization.get('components.mx-bottom-sheet');
-
-					vm.parent = element[0];
-				}
-			}
-
-			return {
-				restrict: 'E',
-				scope: {
-					isEnabled: '&',
-					topOffset: '@',
-					options: '='
-				},
-				bindToController: true,
-				controller: MxBottomSheetCtrl,
-				controllerAs: 'vm',
-				link: link
-			};
-		}]);
-})();
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
 	 * @name mx.components:mxButton
 	 * @module mx.components
 	 * @restrict 'E'
@@ -10562,6 +10414,154 @@ angular.module('mx.components', [
 			};
 		}]);
 })(window);
+
+(function () {
+	'use strict';
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxBottomSheet
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @scope {}
+	 * @description Custom bottom sheet directive
+	 * @usage <mx-bottom-sheet
+	 *        top-offset='24px'
+	 *        options='{
+	 *			icon:'apps',
+	 *			displayMode: 'grid',
+	 *			controller: 'BottomSheetController'*
+	 * 		}'>
+	 * </mx-bottom-sheet>
+	 * @param {string} top-offset= The offset regarding top position of his parent element:
+	 * @param {object} options= An options object, with the following properties:
+	 *   - `icon`        - `{string=}`: The icon to associate with button showing this bottom sheet.
+	 *   - `displayMode`- `{string=}`: Represents one of two modes of displaying: 'grid' or 'list'.
+	 *   - `controller` - `{string=}`: The controller to associate with this bottom sheet.
+	 */
+	angular.module('mx.components').directive('mxBottomSheet', [
+		'$http',
+		'$templateCache',
+		'$compile',
+		'$mdBottomSheet',
+		'$q',
+		'$window',
+		'$mdUtil',
+		'mx.internationalization',
+		function ($http, $templateCache, $compile, $mdBottomSheet, $q, $window, $mdUtil, internationalization) {
+
+			function MxBottomSheetCtrl() {
+				var vm = this;
+				vm.dialogActive = false;
+				vm.toggleDialog = toggleDialog;
+				vm.executeItem = executeItem;
+				vm.focusItem = focusItem;
+				vm.closeBottomSheet = closeBottomSheet;
+
+				var window = angular.element($window);
+				window.on('click', function ($event) {
+					if (vm.dialogActive) {
+						vm.closeBottomSheet();
+						$event.stopPropagation();
+					}
+				});
+
+				return vm;
+
+				function closeBottomSheet() {
+					if (vm.dialogActive) {
+						// $mdBottomSheet.hide();
+						$mdUtil.nextTick($mdBottomSheet.cancel, true);
+						vm.dialogActive = false;
+					}
+				}
+
+				function toggleDialog(options) {
+					if (vm.dialogActive) {
+						vm.closeBottomSheet();
+					}
+					else {
+						var _templateUrl = 'mx-bottom-sheet/' + (options.displayMode === 'grid' ? 'mx-bottom-sheet-grid-template.html' : 'mx-bottom-sheet-list-template.html');
+
+						$mdBottomSheet.show({
+							templateUrl: _templateUrl,
+							controller: options.controller,
+							//disableBackdrop: true,
+							disableParentScroll: false,
+							parent: vm.parent,
+							controllerAs: 'vm',
+							bindToController: true,
+							locals: {
+								execute: vm.executeItem,
+								focus: vm.focusItem,
+								topOffset: vm.topOffset
+							}
+						});
+
+						vm.dialogActive = true;
+					}
+				}
+
+				function executeItem(item) {
+					vm.closeBottomSheet();
+
+					if (angular.isDefined(item) && angular.isFunction(item.execute)) {
+						item.execute();
+					}
+				}
+
+				function focusItem(item) {
+					if (angular.isDefined(item) && angular.isDefined(item.isFocused)) {
+						return item.isFocused;
+					}
+
+					return false;
+				}
+			}
+
+			function link(scope, element, attr, vm) {
+				element.addClass('bottom-sheet-control-container');
+
+				var isEnabled = vm.isEnabled();
+				if (angular.isUndefined(isEnabled)) {
+					isEnabled = true;
+				}
+				if (!isEnabled) {
+					return;
+				}
+				isEnabled = $q.when(isEnabled);
+				isEnabled.then(function (value) {
+					if (!value) {
+						return;
+					}
+					$http.get('mx-bottom-sheet/mx-bottom-sheet.html', {cache: $templateCache}).then(function (response) {
+						var template = $compile(response.data)(scope);
+						element.append(template);
+						load(scope);
+					});
+				});
+
+				function load() {
+					vm.internationalization = internationalization.get('components.mx-bottom-sheet');
+
+					vm.parent = element[0];
+				}
+			}
+
+			return {
+				restrict: 'E',
+				scope: {
+					isEnabled: '&',
+					topOffset: '@',
+					options: '='
+				},
+				bindToController: true,
+				controller: MxBottomSheetCtrl,
+				controllerAs: 'vm',
+				link: link
+			};
+		}]);
+})();
 
 (function () {
 	'use strict';
