@@ -880,6 +880,26 @@ angular.module('mx.components', [
 
 })();
 
+(function () {
+	'use strict';
+
+	MxTextAreaCtrl.$inject = ['mx.internationalization'];
+
+	function MxTextAreaCtrl(internationalization) {
+		mx.components.FormControlControllerBase.call(this, internationalization);
+		this.rows = this.rows || 4;
+		return this;
+	}
+
+	angular.module('mx.components').directive('mxTextArea', function () {
+		var directive = new mx.components.FormControlBase(MxTextAreaCtrl, 'mx-text-area/mx-text-area.html');
+		angular.extend(directive.bindToController, {
+			rows: '@'
+		});
+		return directive;
+	});
+})();
+
 (function (w) {
 	'use strict';
 
@@ -946,26 +966,6 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
-	MxTextAreaCtrl.$inject = ['mx.internationalization'];
-
-	function MxTextAreaCtrl(internationalization) {
-		mx.components.FormControlControllerBase.call(this, internationalization);
-		this.rows = this.rows || 4;
-		return this;
-	}
-
-	angular.module('mx.components').directive('mxTextArea', function () {
-		var directive = new mx.components.FormControlBase(MxTextAreaCtrl, 'mx-text-area/mx-text-area.html');
-		angular.extend(directive.bindToController, {
-			rows: '@'
-		});
-		return directive;
-	});
-})();
-
-(function () {
-	'use strict';
-
 	function mxTabs() {
 
 		MxTabsCtrl.$inject = ['$scope'];
@@ -1008,198 +1008,6 @@ angular.module('mx.components', [
 	angular.module('mx.components').directive('mxTabs', [mxTabs]);
 
 })();
-
-(function (w) {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxRichTextBox
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @scope {}
-	 * @description Rich text box (WYSIWYG editor).
-	 * @param {string} ng-model= - editing model as html.
-	 * @param {boolean} advancedMode@ - (default: `true`) there are 2 modes: "simple" and "advanced".
-	 *        For mobile-device it uses "simple" mode always, no metter the value.
-	 *        If "advancedMode" set as `true` then for wide-screens will be used "advanced" mode.
-	 *        If "advancedMode" set as `false` then for wide-screens will be used "simple" mode.
-	 * @param {callback} on-focus& - fires of focus.
-	 * @param {callback} on-blur& - fires of blur.
-	 * @param {boolean} set-focus@  - if `true` then the focus will be set automatically.
-	 * @usage <mx-rich-text-box nd-model="myHtml"></mx-rich-text-box>
-	 */
-
-	MxRichTextBoxCtrl.$inject = [
-		'$scope',
-		'$element',
-		'$window',
-		'mx.internationalization',
-		'mxTinymceConfig',
-		'uiTinymceConfig',
-		'$timeout'
-	];
-
-	function MxRichTextBoxCtrl(
-		$scope,
-		$element,
-		$window,
-		internationalization,
-		mxTinymceConfig,
-		uiTinymceConfig,
-		$timeout
-	) {
-		var vm = this;
-		var editorInstace;
-
-		/* default settings (should be moved to API)   start */
-		var maxMobileDeviceWidth = 959;
-		/* tablet-landscape */
-		var isMobile = $window.matchMedia('(max-device-width: ' + maxMobileDeviceWidth + 'px)').matches ||
-			$window.outerWidth <= maxMobileDeviceWidth;
-
-		var useAdvancedMode = isMobile ?
-			false :
-			vm.advancedMode ? vm.advancedMode.toLowerCase() !== 'false' : true;
-
-		vm.tinymceOptions = {
-			menubar: false,
-			statusbar: false,
-			plugins: useAdvancedMode ? ['textcolor colorpicker textpattern paste link image'] : undefined,
-			/* enables pasting images from clipboard */
-			paste_data_images: !isMobile,
-			/* prevents auto upload for images */
-			automatic_uploads: false,
-			/* prevents converting img src to blob */
-			images_dataimg_filter: function (img) {
-				return img.hasAttribute('internal-blob');
-			},
-			height: useAdvancedMode ? 300 : 115,
-			min_height: 100,
-			toolbar: useAdvancedMode ?
-				'bold italic underline fontsizeselect link image alignleft aligncenter alignright alignjustify outdent indent bullist numlist' :
-				'bold italic underline | bullist',
-			toolbar_items_size: useAdvancedMode ? 'small' : 'normal',
-			setup: function (editor) {
-				editorInstace = editor;
-				_handleDisabledMode(editor, vm._disabled);
-				_handleReadonlyMode(editor, vm._readOnly);
-				_handleFocus(editor, vm.setFocus);
-				editor.on('init', function () {
-					this.getDoc().body.style.fontSize = '14px';
-					this.getDoc().body.style.lineHeight = '16px';
-					$(this.getDoc().head).append('<style>p {margin: 5px 0px;}</style>');
-					editor.on('focus', function (e) {
-						$timeout(function () {
-							vm.onFocus({event: e, editor: editor});
-						});
-					});
-					editor.on('blur', function (e) {
-						$timeout(function () {
-							vm.onBlur({event: e, editor: editor});
-						});
-					});
-				});
-				editor.on('keypress', function (event) {
-					if (this.getBody().getAttribute('contenteditable') === 'false') {
-						event.preventDefault();
-					}
-				});
-				if (!useAdvancedMode) {
-					_putToolbarToBottom(editor);
-				}
-				if (mxTinymceConfig.baseUrl) {
-					editorInstace.baseURL = mxTinymceConfig.baseUrl;
-					uiTinymceConfig.baseUrl = mxTinymceConfig.baseUrl;
-				}
-			},
-		};
-
-		angular.extend(vm.tinymceOptions, mxTinymceConfig);
-
-		/* default settings (should be moved to API)     end */
-
-		$scope.$watch('vm.setFocus', function (newValue) {
-			_handleFocus(editorInstace, newValue);
-		});
-
-		$scope.$watch('vm._disabled', function (newValue) {
-			_handleDisabledMode(editorInstace, newValue);
-		});
-
-		$scope.$watch('vm._readOnly', function (newValue) {
-			_handleReadonlyMode(editorInstace, newValue);
-		});
-
-		function _putToolbarToBottom(editor) {
-			editor.on('init', function (evt) {
-				var editorEl = $(evt.target.editorContainer);
-				editorEl.addClass('mx-rich-text-box-toolbar-bottom-mode');
-				var toolbar = editorEl.find('>.mce-container-body >.mce-toolbar-grp');
-				var editor = editorEl.find('>.mce-container-body >.mce-edit-area');
-				// switch the order of the elements
-				toolbar.detach().insertAfter(editor);
-			});
-		}
-
-		function _defineBoolValue(value) {
-			return typeof value === 'boolean' ?
-				value :
-				typeof value === 'string' ? value.toLowerCase() !== 'false' : !!value;
-		}
-
-		function _handleFocus(editor, value) {
-			var boolValue = _defineBoolValue(value);
-			if (editor && boolValue) {
-				$timeout(function () {
-					editor.focus();
-				}, 200);
-			}
-		}
-
-		function _handleDisabledMode(editor, value) {
-			var boolValue = _defineBoolValue(value);
-			if (editor) {
-				editor.settings.readonly = boolValue;
-				editor.settings.disabled = boolValue;
-				$($element).attr('disabled', boolValue);
-			}
-		}
-
-		function _handleReadonlyMode(editor, value) {
-			var boolValue = _defineBoolValue(value);
-			if (editor) {
-				editor.settings.readonly = boolValue;
-				$($element).attr('readonly', boolValue);
-			}
-		}
-
-		mx.components.FormControlControllerBase.call(this, internationalization);
-		return vm;
-	}
-
-	angular.module('mx.components')
-		.value('mxTinymceConfig', {})
-		.directive('mxRichTextBox', function () {
-			var directive = new mx.components.FormControlBase(
-				MxRichTextBoxCtrl,
-				'mx-rich-text-box/mx-rich-text-box.html'
-			);
-			angular.extend(directive.bindToController, {
-				toolbar: '=',
-				advancedMode: '@',
-				onBlur: '&',
-				onFocus: '&',
-				setFocus: '@'
-			});
-			return directive;
-		});
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.Forms = w.mx.components.Forms || {};
-
-})(window);
 
 // jscs:disable
 // jshint ignore: start
@@ -4432,6 +4240,233 @@ angular.module('mx.components', [
 // jshint ignore: end
 // jscs:enable
 
+(function (w) {
+	'use strict';
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxRichTextBox
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @scope {}
+	 * @description Rich text box (WYSIWYG editor).
+	 * @param {string} ng-model= - editing model as html.
+	 * @param {boolean} advancedMode@ - (default: `true`) there are 2 modes: "simple" and "advanced".
+	 *        For mobile-device it uses "simple" mode always, no metter the value.
+	 *        If "advancedMode" set as `true` then for wide-screens will be used "advanced" mode.
+	 *        If "advancedMode" set as `false` then for wide-screens will be used "simple" mode.
+	 * @param {callback} on-focus& - fires of focus.
+	 * @param {callback} on-blur& - fires of blur.
+	 * @param {boolean} set-focus@  - if `true` then the focus will be set automatically.
+	 * @usage <mx-rich-text-box nd-model="myHtml"></mx-rich-text-box>
+	 */
+
+	MxRichTextBoxCtrl.$inject = [
+		'$scope',
+		'$element',
+		'$window',
+		'mx.internationalization',
+		'mxTinymceConfig',
+		'uiTinymceConfig',
+		'$timeout'
+	];
+
+	function MxRichTextBoxCtrl(
+		$scope,
+		$element,
+		$window,
+		internationalization,
+		mxTinymceConfig,
+		uiTinymceConfig,
+		$timeout
+	) {
+		var vm = this;
+		var editorInstace;
+
+		/* default settings (should be moved to API)   start */
+		var maxMobileDeviceWidth = 959;
+		/* tablet-landscape */
+		var isMobile = $window.matchMedia('(max-device-width: ' + maxMobileDeviceWidth + 'px)').matches ||
+			$window.outerWidth <= maxMobileDeviceWidth;
+
+		var useAdvancedMode = isMobile ?
+			false :
+			vm.advancedMode ? vm.advancedMode.toLowerCase() !== 'false' : true;
+
+		vm.tinymceOptions = {
+			menubar: false,
+			statusbar: false,
+			plugins: useAdvancedMode ? ['textcolor colorpicker textpattern paste link image'] : undefined,
+			/* enables pasting images from clipboard */
+			paste_data_images: !isMobile,
+			/* prevents auto upload for images */
+			automatic_uploads: false,
+			/* prevents converting img src to blob */
+			images_dataimg_filter: function (img) {
+				return img.hasAttribute('internal-blob');
+			},
+			height: useAdvancedMode ? 300 : 115,
+			min_height: 100,
+			toolbar: useAdvancedMode ?
+				'bold italic underline fontsizeselect link image alignleft aligncenter alignright alignjustify outdent indent bullist numlist' :
+				'bold italic underline | bullist',
+			toolbar_items_size: useAdvancedMode ? 'small' : 'normal',
+			setup: function (editor) {
+				editorInstace = editor;
+				_handleDisabledMode(editor, vm._disabled);
+				_handleReadonlyMode(editor, vm._readOnly);
+				_handleFocus(editor, vm.setFocus);
+				editor.on('init', function () {
+					this.getDoc().body.style.fontSize = '14px';
+					this.getDoc().body.style.lineHeight = '16px';
+					$(this.getDoc().head).append('<style>p {margin: 5px 0px;}</style>');
+					editor.on('focus', function (e) {
+						$timeout(function () {
+							vm.onFocus({event: e, editor: editor});
+						});
+					});
+					editor.on('blur', function (e) {
+						$timeout(function () {
+							vm.onBlur({event: e, editor: editor});
+						});
+					});
+				});
+				editor.on('keypress', function (event) {
+					if (this.getBody().getAttribute('contenteditable') === 'false') {
+						event.preventDefault();
+					}
+				});
+				if (!useAdvancedMode) {
+					_putToolbarToBottom(editor);
+				}
+				if (mxTinymceConfig.baseUrl) {
+					editorInstace.baseURL = mxTinymceConfig.baseUrl;
+					uiTinymceConfig.baseUrl = mxTinymceConfig.baseUrl;
+				}
+			},
+		};
+
+		angular.extend(vm.tinymceOptions, mxTinymceConfig);
+
+		/* default settings (should be moved to API)     end */
+
+		$scope.$watch('vm.setFocus', function (newValue) {
+			_handleFocus(editorInstace, newValue);
+		});
+
+		$scope.$watch('vm._disabled', function (newValue) {
+			_handleDisabledMode(editorInstace, newValue);
+		});
+
+		$scope.$watch('vm._readOnly', function (newValue) {
+			_handleReadonlyMode(editorInstace, newValue);
+		});
+
+		function _putToolbarToBottom(editor) {
+			editor.on('init', function (evt) {
+				var editorEl = $(evt.target.editorContainer);
+				editorEl.addClass('mx-rich-text-box-toolbar-bottom-mode');
+				var toolbar = editorEl.find('>.mce-container-body >.mce-toolbar-grp');
+				var editor = editorEl.find('>.mce-container-body >.mce-edit-area');
+				// switch the order of the elements
+				toolbar.detach().insertAfter(editor);
+			});
+		}
+
+		function _defineBoolValue(value) {
+			return typeof value === 'boolean' ?
+				value :
+				typeof value === 'string' ? value.toLowerCase() !== 'false' : !!value;
+		}
+
+		function _handleFocus(editor, value) {
+			var boolValue = _defineBoolValue(value);
+			if (editor && boolValue) {
+				$timeout(function () {
+					editor.focus();
+				}, 200);
+			}
+		}
+
+		function _handleDisabledMode(editor, value) {
+			var boolValue = _defineBoolValue(value);
+			if (editor) {
+				editor.settings.readonly = boolValue;
+				editor.settings.disabled = boolValue;
+				$($element).attr('disabled', boolValue);
+			}
+		}
+
+		function _handleReadonlyMode(editor, value) {
+			var boolValue = _defineBoolValue(value);
+			if (editor) {
+				editor.settings.readonly = boolValue;
+				$($element).attr('readonly', boolValue);
+			}
+		}
+
+		mx.components.FormControlControllerBase.call(this, internationalization);
+		return vm;
+	}
+
+	angular.module('mx.components')
+		.value('mxTinymceConfig', {})
+		.directive('mxRichTextBox', function () {
+			var directive = new mx.components.FormControlBase(
+				MxRichTextBoxCtrl,
+				'mx-rich-text-box/mx-rich-text-box.html'
+			);
+			angular.extend(directive.bindToController, {
+				toolbar: '=',
+				advancedMode: '@',
+				onBlur: '&',
+				onFocus: '&',
+				setFocus: '@'
+			});
+			return directive;
+		});
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.Forms = w.mx.components.Forms || {};
+
+})(window);
+
+(function () {
+	'use strict';
+	function mxRepeater() {
+
+		MxRepeaterCtrl.$inject = ['$scope'];
+
+		function MxRepeaterCtrl($scope) {
+			var __$vm = this;
+			__$vm.initScope = function () {
+				if (__$vm.parentControllerAs) {
+					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
+				} else {
+					$scope.dataModel = $scope.$parent;
+				}
+			};
+		}
+
+		return {
+			restrict: 'E',
+			scope: {
+				entity: '=' /* object used in scopes of templates */
+			},
+			bindToController: {
+				entities: '=',
+				templateId: '@',
+				parentControllerAs: '@'
+			},
+			templateUrl: 'mx-repeater/mx-repeater.html',
+			controller: MxRepeaterCtrl,
+			controllerAs: '__$vm'
+		};
+	}
+
+	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
+})();
 (function () {
 	'use strict';
 
@@ -4504,41 +4539,36 @@ angular.module('mx.components', [
 	}
 })();
 
-(function () {
+(function(w) {
 	'use strict';
-	function mxRepeater() {
 
-		MxRepeaterCtrl.$inject = ['$scope'];
+	MxNumericEditCtrl.$inject = ['mx.internationalization'];
 
-		function MxRepeaterCtrl($scope) {
-			var __$vm = this;
-			__$vm.initScope = function () {
-				if (__$vm.parentControllerAs) {
-					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
-				} else {
-					$scope.dataModel = $scope.$parent;
-				}
-			};
-		}
-
-		return {
-			restrict: 'E',
-			scope: {
-				entity: '=' /* object used in scopes of templates */
-			},
-			bindToController: {
-				entities: '=',
-				templateId: '@',
-				parentControllerAs: '@'
-			},
-			templateUrl: 'mx-repeater/mx-repeater.html',
-			controller: MxRepeaterCtrl,
-			controllerAs: '__$vm'
-		};
+	function MxNumericEditCtrl(internationalization) {
+		mx.components.FormControlControllerBase.call(this, internationalization);
+		var vm = this;
+		vm.format = vm.format || mxNumericEditFormat.Integer;
+		return vm;
 	}
 
-	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
-})();
+	angular.module('mx.components').directive('mxNumericEdit', function() {
+		var directive = new mx.components.FormControlBase(MxNumericEditCtrl, 'mx-numeric-edit/mx-numeric-edit.html');
+		angular.extend(directive.bindToController, {format: '@'});
+		return directive;
+	});
+
+	var mxNumericEditFormat = {
+		Integer: 'integer',
+		Float: 'float'
+	};
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.Forms = w.mx.components.Forms || {};
+	w.mx.components.Forms.NumericEditFormat = mxNumericEditFormat;
+
+})(window);
+
 /**
  * Created by mabdurashidov on 2/21/2016.
  */
@@ -5420,36 +5450,6 @@ angular.module('mx.components', [
 
 })(window);
 
-(function(w) {
-	'use strict';
-
-	MxNumericEditCtrl.$inject = ['mx.internationalization'];
-
-	function MxNumericEditCtrl(internationalization) {
-		mx.components.FormControlControllerBase.call(this, internationalization);
-		var vm = this;
-		vm.format = vm.format || mxNumericEditFormat.Integer;
-		return vm;
-	}
-
-	angular.module('mx.components').directive('mxNumericEdit', function() {
-		var directive = new mx.components.FormControlBase(MxNumericEditCtrl, 'mx-numeric-edit/mx-numeric-edit.html');
-		angular.extend(directive.bindToController, {format: '@'});
-		return directive;
-	});
-
-	var mxNumericEditFormat = {
-		Integer: 'integer',
-		Float: 'float'
-	};
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.Forms = w.mx.components.Forms || {};
-	w.mx.components.Forms.NumericEditFormat = mxNumericEditFormat;
-
-})(window);
-
 (function (w, a) {
 	'use strict';
 
@@ -6007,65 +6007,6 @@ angular.module('mx.components', [
 
 })();
 
-(function (w) {
-	'use strict';
-
-	function LazyLoad(src) {
-		var script = document.createElement('script');
-		script.type = 'text/javascript';
-		script.async = true;
-		script.src = '/' + src;
-		var first = document.getElementsByTagName('script')[0];
-		first.parentNode.insertBefore(script, first);
-	}
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.LazyLoad = LazyLoad;
-
-
-//	function MxLazyLoadCtrl(){
-//		return this;
-//	}
-//
-//	angular.module('mx.components').directive('mxLazyLoad', function() {
-//		return {
-//			restrict: 'E',
-//			scope: false,
-////			replace:true,
-//			controller:MxLazyLoadCtrl,
-//			controllerAs: 'vm',
-//			bindToController: {
-//				src:'@'
-//			},
-//			template: function(elem, attrs){
-//				return '<script src="' + attrs.src + '"></script>';
-//			} ,
-//			link: function(scope, elem, attr) {
-//				var code = elem.text();
-//				var f = new Function(code);// jshint ignore:line
-//				f();
-//			}
-//		};
-//	});
-
-
-	angular.module('mx.components').directive('mxLazyLoad', function () {
-		return {
-			restrict: 'A',
-			scope: false,
-			link: function (/*scope, elem, attr*/) {
-				//if(attr.type === 'text/javascript-lazy'){
-				//	var code = elem.text();
-				//	var f = new Function(code);// jshint ignore:line
-				//	f();
-				//}
-			}
-		};
-	});
-
-}(window));
-
 (function () {
 	'use strict';
 
@@ -6306,6 +6247,65 @@ angular.module('mx.components', [
 		};
 	});
 })();
+
+(function (w) {
+	'use strict';
+
+	function LazyLoad(src) {
+		var script = document.createElement('script');
+		script.type = 'text/javascript';
+		script.async = true;
+		script.src = '/' + src;
+		var first = document.getElementsByTagName('script')[0];
+		first.parentNode.insertBefore(script, first);
+	}
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.LazyLoad = LazyLoad;
+
+
+//	function MxLazyLoadCtrl(){
+//		return this;
+//	}
+//
+//	angular.module('mx.components').directive('mxLazyLoad', function() {
+//		return {
+//			restrict: 'E',
+//			scope: false,
+////			replace:true,
+//			controller:MxLazyLoadCtrl,
+//			controllerAs: 'vm',
+//			bindToController: {
+//				src:'@'
+//			},
+//			template: function(elem, attrs){
+//				return '<script src="' + attrs.src + '"></script>';
+//			} ,
+//			link: function(scope, elem, attr) {
+//				var code = elem.text();
+//				var f = new Function(code);// jshint ignore:line
+//				f();
+//			}
+//		};
+//	});
+
+
+	angular.module('mx.components').directive('mxLazyLoad', function () {
+		return {
+			restrict: 'A',
+			scope: false,
+			link: function (/*scope, elem, attr*/) {
+				//if(attr.type === 'text/javascript-lazy'){
+				//	var code = elem.text();
+				//	var f = new Function(code);// jshint ignore:line
+				//	f();
+				//}
+			}
+		};
+	});
+
+}(window));
 
 (function () {
 	'use strict';
@@ -6866,19 +6866,6 @@ angular.module('mx.components', [
 		}]);
 })();
 
-(function () {
-	'use strict';
-
-	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
-		function mxi18nFilter(string, defaultText) {
-			return internationalization.get(string, defaultText);
-		}
-
-		return mxi18nFilter;
-	}]);
-
-})();
-
 (function (){
     'use strict';
 
@@ -7076,6 +7063,19 @@ angular.module('mx.components', [
             closePanel();
         }
     }
+
+})();
+
+(function () {
+	'use strict';
+
+	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
+		function mxi18nFilter(string, defaultText) {
+			return internationalization.get(string, defaultText);
+		}
+
+		return mxi18nFilter;
+	}]);
 
 })();
 
@@ -9421,6 +9421,40 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
+	MxCurrencyController.$inject = ['mx.internationalization'];
+
+	function MxCurrencyController(internationalization) {
+		var vm = this;
+		mx.components.FormControlControllerBase.call(vm, internationalization);
+		vm.validationPattern = /^(:?\d+)?\.?\d+?$/;
+		return vm;
+	}
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxCurrency
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @description
+	 * The mx-currency control is used to display currency input field with currency code displayed.
+	 *
+	 * The control extends {@ref mx.components:FormControlBase FormControlBase} directive.
+	 *
+	 * @param {string} currencyCode@ - Currency code to be displayed.
+	 * @usage <mx-currency ng-model="vm.currencyValue" data-label="Currency editor" currency-code="{{vm.currencyCode}}"></mx-currency>
+	 */
+	angular.module('mx.components').directive('mxCurrency', function () {
+		var directive = new mx.components.FormControlBase(MxCurrencyController, 'mx-currency/mx-currency.html');
+		angular.extend(directive.bindToController, {
+			currencyCode: '@'
+		});
+		return directive;
+	});
+})();
+
+(function () {
+	'use strict';
+
 	var standardPageSizes = [10, 20, 50, 100];
 	angular.module('mx.components')
 		.directive('mxWorkspaceCommonPagingPanel', function () {
@@ -9524,40 +9558,6 @@ angular.module('mx.components', [
 		});
 })();
 
-
-(function () {
-	'use strict';
-
-	MxCurrencyController.$inject = ['mx.internationalization'];
-
-	function MxCurrencyController(internationalization) {
-		var vm = this;
-		mx.components.FormControlControllerBase.call(vm, internationalization);
-		vm.validationPattern = /^(:?\d+)?\.?\d+?$/;
-		return vm;
-	}
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxCurrency
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @description
-	 * The mx-currency control is used to display currency input field with currency code displayed.
-	 *
-	 * The control extends {@ref mx.components:FormControlBase FormControlBase} directive.
-	 *
-	 * @param {string} currencyCode@ - Currency code to be displayed.
-	 * @usage <mx-currency ng-model="vm.currencyValue" data-label="Currency editor" currency-code="{{vm.currencyCode}}"></mx-currency>
-	 */
-	angular.module('mx.components').directive('mxCurrency', function () {
-		var directive = new mx.components.FormControlBase(MxCurrencyController, 'mx-currency/mx-currency.html');
-		angular.extend(directive.bindToController, {
-			currencyCode: '@'
-		});
-		return directive;
-	});
-})();
 
 (function () {
 	'use strict';
@@ -14526,8 +14526,8 @@ $templateCache.put("mx-bottom-sheet/mx-bottom-sheet-list-template.html","<md-bot
 $templateCache.put("mx-bottom-sheet/mx-bottom-sheet.html","<div class=\"md-btn bottom-sheet-btn\" ng-attr-tooltip=\"{{::vm.internationalization.iconAlt}}\" tooltip-append-to-body=\"true\" tooltip-placement=\"bottom\" tooltip-html=\"true\" ng-click=\"vm.toggleDialog(vm.options); $event.stopPropagation();\"><span><md-icon ng-if=\"vm.options.icon\">{{vm.options.icon || \'apps\'}}</md-icon></span></div>");
 $templateCache.put("mx-button/mx-button.html","<md-button ng-attr-md-autofocus=\"{{vm.focused || false}}\" ng-disabled=\"vm.isDisabled\" aria-label=\"vm.label\" ng-class=\"[vm.styles ? vm.styles : \'md-raised md-accent md-hue-2\']\" ng-click=\"vm.click()\"><md-icon ng-if=\"vm.icon\">{{vm.icon}}</md-icon>{{vm.label}}</md-button>");
 $templateCache.put("mx-calendar/mx-calendar.html","<div oc-lazy-load=\"ui.calendar\"><div ui-calendar=\"vm.options\" ng-model=\"vm._items\"></div></div>");
-$templateCache.put("mx-checkbox/mx-checkbox.html","<md-input-container><md-checkbox name=\"{{::vm.internalName}}\" ng-model=\"vm.model\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-true-value=\"true\" ng-false-value=\"false\" aria-label=\"vm.label\"><span ng-bind-html=\"vm.label\"></span></md-checkbox></md-input-container>");
 $templateCache.put("mx-choice/mx-choice.html","<div class=\"mx-choice flex\"><md-radio-group ng-model=\"__$vm.selectedPanelName\" ng-if=\"__$vm.showSwitchButtons\"><div class=\"flex\" ng-repeat=\"__$panel in __$vm.panels | orderBy: \'position\'\"><md-radio-button value=\"{{__$panel.name}}\" class=\"mx-choice__choice-button\"><span class=\"mx-choice__panel-title\">{{__$panel.title}}</span></md-radio-button><div class=\"mx-choice__panel-description\">{{__$panel.description}}</div></div></md-radio-group><div class=\"mx-choice__panel flex\" ng-repeat=\"__$panel in __$vm.panels track by __$panel.id\" ng-if=\"__$panel.name === (__$vm.selectedPanelName || __$vm.panels[0].name)\" ng-include=\"\" src=\"__$panel.id\" data-onload=\"__$vm.initScope()\"></div></div>");
+$templateCache.put("mx-checkbox/mx-checkbox.html","<md-input-container><md-checkbox name=\"{{::vm.internalName}}\" ng-model=\"vm.model\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-true-value=\"true\" ng-false-value=\"false\" aria-label=\"vm.label\"><span ng-bind-html=\"vm.label\"></span></md-checkbox></md-input-container>");
 $templateCache.put("mx-currency/mx-currency.html","<md-input-container class=\"mx-currency\"><span class=\"mx-currency--code\">{{vm.currencyCode}}</span><mx-text-box class=\"mx-currency--value\" data-label=\"{{vm.label}}\" data-read-only=\"vm._readOnly\" data-disabled=\"vm._disabled\" ng-model=\"vm.model\" ng-pattern=\"vm.validationPattern\"></mx-text-box></md-input-container>");
 $templateCache.put("mx-datasource-paging-panel/mx-datasource-paging-panel.html","<div class=\"mx-workspace-common-paging-panel--container\" layout=\"row\" layout-align=\"center center\"><div class=\"mx-workspace-common-paging-panel--pagenumber\">{{\'components.mx-datasource-paging-panel.pageSize\' | mxi18n}}:</div><div><md-select aria-label=\"Rows count selector\" class=\"ui-grid-pager-row-count-selector\" md-container-class=\"ui-grid-pager-row-count-dropdown\" ng-disabled=\"vm.isDisabled\" ng-model=\"vm.pageSize\"><md-option ng-repeat=\"size in vm.pageSizes\" ng-value=\"size\">{{ size }}</md-option></md-select></div><p class=\"mx-workspace-common-paging-panel--pages\" ng-bind=\"vm.pagingLabel\"></p><md-button class=\"mx-workspace-common-paging-panel--prev\" ng-disabled=\"vm.isNotPrevPage\" aria-label=\"Prev\" ng-click=\"vm.prev()\"><md-icon>chevron_left</md-icon></md-button><div class=\"mx-workspace-common-paging-panel--pagenumber\">{{vm.preprocessor.page + 1}}</div><md-button class=\"mx-workspace-common-paging-panel--next\" ng-disabled=\"vm.isNotNextPage\" aria-label=\"Prev\" ng-click=\"vm.next()\"><md-icon>chevron_right</md-icon></md-button></div>");
 $templateCache.put("mx-date-picker/mx-date-picker.html","<div><md-input-container class=\"md-input-has-value\" ng-class=\"{\'md-input-focused\': vm.isFocused}\" ng-show=\"vm.model || vm.isFocused\"><label><span ng-bind-html=\"vm.label\"></span></label></md-input-container></div><md-datepicker name=\"{{::vm.internalName}}\" ng-model=\"vm.value\" ng-disabled=\"vm._disabled || vm._readOnly\" md-max-date=\"vm.maxDate\" md-min-date=\"vm.minDate\" ng-required=\"vm.ngRequired\" md-placeholder=\"{{::vm.label}}\"></md-datepicker><mx-control-errors></mx-control-errors>");
@@ -14552,7 +14552,7 @@ $templateCache.put("mx-image-preview/mx-image-preview.html","<md-dialog aria-lab
 $templateCache.put("mx-journal/mx-journal.html","<div class=\"journal-container\"><div class=\"journal-container--items\"><div ng-repeat=\"item in vm.items\" class=\"journal-item\" layout=\"column\" ng-class=\"{ \'journal-item--my\':item.__my, \'journal-item--first\':item.__first }\"><div><div class=\"journal-item__user\"><div layout=\"row\"><div ng-init=\"userPhoto = item.photo\"><img ng-show=\"userPhoto\" ng-src=\"{{::userPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!userPhoto\" class=\"journal-item__photo-letter journal-item__photo\">{{::item.userName | limitTo:1}}</span></div><div class=\"journal-item__user-name\" flex=\"\">{{::item.userName}}</div></div></div><div class=\"journal-item__date\">{{::item.__created | date:\'medium\'}}</div></div><div class=\"journal-item__content\"><p ng-bind-html=\"item.text\"></p></div></div><div class=\"journal-container--load-more\" ng-show=\"vm.canLoadMore && !vm.processingItems\"><md-button ng-click=\"vm.loadMoreItems()\">{{\'components.journal.load_more_items\' | mxi18n}}</md-button></div><div class=\"journal-container--load-more\" ng-show=\"vm.processingItems\">{{\'components.journal.loading\' | mxi18n}}</div></div><div class=\"journal-item--new journal-item\" ng-if=\"!vm.readOnly\"><div ng-init=\"myPhoto = vm.currentUserPhoto\" class=\"journal-item__photo-wrapper\"><img ng-show=\"myPhoto\" ng-src=\"{{::myPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!myPhoto\" class=\"journal-item__photo-letter journal-item__photo\">Y</span></div><div ng-if=\"vm._showRichEditor\"><mx-rich-text-box class=\"journal-item--new-textarea\" ng-model=\"vm.newComment\" advanced-mode=\"false\" set-focus=\"true\" on-blur=\"vm._handleRichTextBoxBlur()\"></mx-rich-text-box><md-button class=\"journal-item--new__content-button\" ng-click=\"vm.addComment();\" title=\"{{\'components.journal.send_button_label\' | mxi18n}}\" ng-disabled=\"vm.adding || vm.newComment===\'\' && vm.attachments.length === 0\" aria-label=\"{{\'components.journal.send_button_label\' | mxi18n}}\">{{\'components.journal.send_button_label\' | mxi18n}}</md-button><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button></div><div ng-show=\"!vm._showRichEditor\" class=\"journal-item--new-textarea-placeholder\" ng-click=\"vm._showRichEditor = true;\"><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__preview-attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button>{{\'components.journal.write_your_comment\' | mxi18n}}</div><ul class=\"journal-item--new-attachments-list\"><li ng-repeat=\"file in vm.attachments\"><md-icon>insert_drive_file</md-icon>{{::file.DisplayString}}</li></ul></div></div>");
 $templateCache.put("mx-numeric-edit/mx-numeric-edit.html","<md-input-container md-is-error=\"vm.controlNgModel.mxInvalid\"><label>{{vm.label}}</label> <input name=\"{{::vm.name}}\" mx-mask=\"{{::vm.format}}\" ng-model=\"vm.model\" ng-disabled=\"vm._disabled\" ng-readonly=\"vm._readOnly\"><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container>");
 $templateCache.put("mx-picker/mx-autocomplete.html","<md-autocomplete md-items=\"item in vm.autoCompleteSearch()\" md-search-text=\"vm.autoCompleteSearchText\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-item-text=\"vm.getTitle(item)\" md-no-cache=\"true\" md-floating-label=\"{{vm.label}}\" ng-disabled=\"vm._disabled || vm._readOnly\" md-min-length=\"0\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\"><md-item-template><span md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}</span></md-not-found><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-autocomplete>");
-$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\"><md-input-container ng-class=\"{\'md-input-focused\': vm._disabled || vm._readOnly}\"><label><span ng-bind-html=\"vm.controlLabel\"></span></label><md-chips ng-model=\"vm.selectedItems\" md-autocomplete-snap=\"\" md-require-match=\"true\" md-on-add=\"vm.onSelectionChange()\" md-on-remove=\"vm.onSelectionChange()\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-items=\"item in vm.autoCompleteSearch()\" placeholder=\"{{vm.autoPlaceholder}}\" md-search-text=\"vm.autoCompleteSearchText\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-item-text=\"vm.getTitle(item)\" md-delay=\"vm.loadDelay\" md-no-cache=\"true\" ng-disabled=\"vm._disabled || vm._readOnly\" md-min-length=\"0\" input-name=\"{{::vm.internalName}}\" md-menu-class=\"mx-picker-item-template {{::vm.dropdownHtmlClass}}\"><md-item-template><span class=\"item-title\"><span md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span><span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
+$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\"><md-input-container ng-class=\"{\'md-input-focused\': vm._disabled || vm._readOnly}\"><label><span ng-bind-html=\"vm.controlLabel\"></span></label><md-chips ng-model=\"vm.selectedItems\" md-autocomplete-snap=\"\" md-require-match=\"true\" md-on-add=\"vm.onSelectionChange()\" md-on-remove=\"vm.onSelectionChange()\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-items=\"item in vm.autoCompleteSearch()\" placeholder=\"{{vm.autoPlaceholder}}\" md-search-text=\"vm.autoCompleteSearchText\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-item-text=\"vm.getTitle(item)\" md-delay=\"vm.loadDelay\" md-no-cache=\"true\" ng-disabled=\"vm._disabled || vm._readOnly\" md-min-length=\"1\" input-name=\"{{::vm.internalName}}\" md-menu-class=\"mx-picker-item-template {{::vm.dropdownHtmlClass}}\"><md-item-template><span class=\"item-title\"><span md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span><span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
 $templateCache.put("mx-picker/mx-select.html","<md-input-container><label>{{vm.label}}</label><md-select ng-model-options=\"{ trackBy: \'vm.getTrackingValue($value)\' }\" ng-model=\"vm.selectModel\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-readonly=\"vm._readOnly\"><md-option ng-value=\"vm.getId(item)\" ng-repeat=\"item in vm.items\">{{vm.getTitle(item)}}</md-option></md-select><mx-control-errors></mx-control-errors></md-input-container>");
 $templateCache.put("mx-rating/mx-rating.html","<label>{{vm.label}}</label><div class=\"mx-rating\" ng-class=\"[vm._disabled ? \'mx-rating--disabled\' : \'\']\"><md-icon class=\"mx-rating--star\" ng-repeat=\"star in vm.stars\" ng-class=\"{\'mx-rating--star-filled\': star.filled }\" ng-click=\"vm.toggle($index)\">star</md-icon></div>");
 $templateCache.put("mx-repeater/mx-repeater.html","<div class=\"mx-repeater\" flex=\"\"><div flex=\"\" class=\"mx-repeater--row\" ng-repeat=\"item in __$vm.entities\"><div class=\"mx-repeater--panel\" flex=\"\" ng-include=\"\" src=\"__$vm.templateId\" data-onload=\"__$vm.initScope()\"></div></div></div>");
