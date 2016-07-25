@@ -2,48 +2,36 @@
 
 	<div layout="column">
 		<mx-multi-picker
-			ng-required         = "vm.isRequired"
-			read-only           = "vm.isReadOnly"
-			disabled            = "vm.isDisabled"
-
-			hint                = "This is a hint"
-			class               = "mx-multi-picker-default"
-			item-title-field    = "title"
-			items               = "vm.pickerData"
-			label               = "Value as Id"
-			value-as-id         = "true"
-			dropdown-html-class = "mx-multi-picker-default-values"
-			navigate-item       = "vm.navigateSelectedItem"
-			ng-model            = "vm.pickerValue"
-		></mx-multi-picker>
+			data-items="vm.pickerData"
+			data-read-only="false"
+			ng-model="vm.pickerValue"
+			ng-required="true"
+			data-value-as-id="true"
+			navigate-item="vm.navigateSelectedItem"
+			data-label="Value as Id, required"
+			data-item-title-field="title"
+			class="mx-multi-picker-default"
+			dropdown-html-class="mx-multi-picker-default-values">
+		</mx-multi-picker>
 
 		<div class="mx-multi-picker-default-results">
 			{{vm.pickerValue}}
 		</div>
 
-
-		<div layout="column" layout-padding>
-			<md-checkbox style="width: 150px" ng-model="vm.isRequired">Required</md-checkbox>
-			<md-checkbox style="width: 150px" ng-model="vm.isReadOnly">Read-only</md-checkbox>
-			<md-checkbox style="width: 150px" ng-model="vm.isDisabled">Disabled</md-checkbox>
-		</div>
-
-		<hr>
-
 	</div>
 
 	<div layout="column">
 		<mx-multi-picker
-			browse-lookup       = "vm.browseLookup"
-			class               = "mx-multi-picker-value-as-item"
-			item-title-field    = "title"
-			items               = "vm.pickerData"
-			label               = "Value as Item"
-			read-only           = "false"
-			dropdown-html-class = "mx-multi-picker-value-as-item-values"
-			ng-model            = "vm.pickerItemValue"
-			ng-required         = "true"
-		></mx-multi-picker>
+			data-items="vm.pickerData"
+			data-read-only="false"
+			ng-model="vm.pickerItemValue"
+			ng-required="true"
+			data-label="Value as Item"
+			data-item-title-field="title"
+			class="mx-multi-picker-value-as-item"
+			browse-lookup="vm.browseLookup"
+			dropdown-html-class="mx-multi-picker-value-as-item-values">
+		</mx-multi-picker>
 		<div class="mx-multi-picker-value-as-item-results">
 			Value: {{vm.pickerItemValue}}
 		</div>
@@ -66,15 +54,15 @@
 
 	<div layout="column">
 		<mx-multi-picker
-			items               = "vm.pickerData"
-			read-only           = "false"
-			ng-model            = "vm.pickerCommaValue"
-			label               = "Comma Separated Value"
-			separator-char      = ","
-			item-title-field    = "title"
-			class               = "mx-multi-picker-comma-separated-value"
-			dropdown-html-class = "mx-multi-picker-comma-separated-value-values"
-		></mx-multi-picker>
+			data-items="vm.pickerData"
+			data-read-only="false"
+			ng-model="vm.pickerCommaValue"
+			data-label="Comma Separated Value"
+			separator-char=","
+			data-item-title-field="title"
+			class="mx-multi-picker-comma-separated-value"
+			dropdown-html-class="mx-multi-picker-comma-separated-value-values">
+		</mx-multi-picker>
 		<div class="mx-multi-picker-comma-separated-value-results">
 			Value: {{vm.pickerCommaValue}}
 		</div>
@@ -82,15 +70,15 @@
 
 	<div layout="column">
 		<mx-multi-picker
-			ng-model            = "vm.pickerLoadOnTypingValue"
-			item-title-field    = "DisplayString"
-			item-id-field       = "Value"
-			load-items          = "vm.loadItems"
-			load-on-typing      = "true"
-			label               = "Load on typing"
-			class               = "mx-multi-picker-load-on-typing"
-			dropdown-html-class = "mx-multi-picker-load-on-typing-values"
-		></mx-multi-picker>
+			ng-model="vm.pickerLoadOnTypingValue"
+			data-item-title-field="DisplayString"
+			data-item-id-field="Value"
+			data-load-items="vm.loadItems"
+			data-load-on-typing="true"
+			data-label="Load on typing"
+			class="mx-multi-picker-load-on-typing"
+			dropdown-html-class="mx-multi-picker-load-on-typing-values">
+		</mx-multi-picker>
 		<div class="mx-multi-picker-load-on-typing-results">
 			Value: {{vm.pickerLoadOnTypingValue}}
 		</div>
