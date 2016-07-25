@@ -2579,39 +2579,6 @@ button.md-button.md-icon-button.journal-item--new__preview-attach-button {
 	color: $mx_palette_Primary_100;
 }
 
-.mx-rating {
-	margin: 0;
-	padding: 0;
-	display: inline-block;
-
-	.mx-rating--star {
-		padding: .1rem;
-
-		outline: none;
-		font-size: 20px;
-		text-shadow: .05em .05em #aaa;
-		list-style-type: none;
-		display: inline-block;
-		cursor: pointer;
-		color: $mx_palette_Primary_100;
-
-		&.mx-rating--star-filled, &:hover {
-			color: $mx_palette_Accent_400;
-		}
-	}
-
-	&.mx-rating--disabled {
-		pointer-events: none;
-		.mx-rating--star-filled {
-			color: $mx_palette_Primary_300;
-			//&:hover {
-			//	color: $mx_palette_Primary_100;
-			//}
-		}
-
-	}
-}
-
 .md-autocomplete-suggestions-container.md-default-theme li,
 .md-autocomplete-suggestions-container li {
 	color: #757575;
@@ -2619,7 +2586,7 @@ button.md-button.md-icon-button.journal-item--new__preview-attach-button {
 
 .md-autocomplete-suggestions-container.md-default-theme li .highlight,
 .md-autocomplete-suggestions-container li .highlight {
-	color: rgba(0, 0, 0, 0.87);
+	color: #000000;
 }
 
 mx-multi-picker {
@@ -2643,7 +2610,7 @@ mx-multi-picker {
 		color: rgba(0,0,0,0.12);
 
 		&:hover{
-			color: rgba(0,0,0,0.84);
+			color: #000000;
 		}
 	}
 
@@ -2700,14 +2667,14 @@ mx-multi-picker {
 
 			input {
 				margin-top: -18px;
-				color: rgba(0,0,0,0.87);
+				color: #000000;
 			}
         }
 
 	}
 
 	md-input-container:not(.md-input-invalid).md-input-focused [disabled] label {
-		color: rgba(0,0,0,0.26);
+		color: #000000;
 	}
 
 	md-input-container label:not(.md-no-float):not(.md-container-ignore),
@@ -2722,7 +2689,7 @@ mx-multi-picker {
 
 	.mx-multipicker--container .md-chips .md-chip a {
 		border-bottom: 1px solid #fc8529;
-		transition: border-bottom-color 0.25s ease-in-out, color 0.25s ease-in-out;
+		//transition: border-bottom-color 0.25s ease-in-out, color 0.25s ease-in-out;
 		-webkit-user-select: none;
 		user-select: none;
 		cursor: pointer;
@@ -2734,10 +2701,10 @@ mx-multi-picker {
 
 	}
 
-	.mx-multipicker--container .md-chips .md-chip:hover,
-	.mx-multipicker--container .md-chips .md-chip.md-focused {
-		transition: background 0.25s ease-in;
-	}
+	//.mx-multipicker--container .md-chips .md-chip:hover,
+	//.mx-multipicker--container .md-chips .md-chip.md-focused {
+	//	transition: background 0.25s ease-in;
+	//}
 
 }
 
@@ -2930,6 +2897,39 @@ mx-select {
 	}
 	md-input-container {
 		margin-top: 16px;
+	}
+}
+
+.mx-rating {
+	margin: 0;
+	padding: 0;
+	display: inline-block;
+
+	.mx-rating--star {
+		padding: .1rem;
+
+		outline: none;
+		font-size: 20px;
+		text-shadow: .05em .05em #aaa;
+		list-style-type: none;
+		display: inline-block;
+		cursor: pointer;
+		color: $mx_palette_Primary_100;
+
+		&.mx-rating--star-filled, &:hover {
+			color: $mx_palette_Accent_400;
+		}
+	}
+
+	&.mx-rating--disabled {
+		pointer-events: none;
+		.mx-rating--star-filled {
+			color: $mx_palette_Primary_300;
+			//&:hover {
+			//	color: $mx_palette_Primary_100;
+			//}
+		}
+
 	}
 }
 

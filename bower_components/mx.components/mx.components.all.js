@@ -4467,6 +4467,78 @@ angular.module('mx.components', [
 
 	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
 })();
+(function () {
+	'use strict';
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxRating
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @scope {}
+	 * @description Rating with stars directive
+	 * @param {string} label@ - Text to be displayed with rating
+	 * @param {int} max@ - Maximum value
+	 * @param {int} value@ - Current value
+	 * @param {boolean} disabled= - Specifies if control is disabled
+	 * @usage <mx-rating label='Rate me' value='3' max='5'></mx-rating>
+	 */
+	angular.module('mx.components').directive('mxRating', MxRating);
+
+	RatingController.$inject = ['$scope'];
+
+	function RatingController($scope) {
+		var vm = this;
+
+		updateStars();
+
+		if (!vm.max) {
+			vm.max = 5;
+		}
+		vm._disabled = !!vm.disabled;
+
+		vm.toggle = function (index) {
+			if (vm._disabled !== true && vm.readOnly !== true) {
+				vm.value = index + 1;
+			}
+		};
+
+		$scope.$watch('vm.value', function (newValue) {
+			if (newValue) {
+				updateStars(newValue);
+			}
+		});
+
+		function updateStars(newValue) {
+			vm.stars = [];
+			for (var i = 0; i < vm.max; i++) {
+				vm.stars.push({
+					filled: i < newValue
+				});
+			}
+		}
+
+		return vm;
+	}
+
+	function MxRating() {
+		return {
+			restrict: 'E',
+			templateUrl: 'mx-rating/mx-rating.html',
+			scope: {},
+			controller: RatingController,
+			controllerAs: 'vm',
+			bindToController: {
+				value: '=',
+				max: '@',
+				disabled: '=',
+				label: '@',
+				readOnly: '='
+			}
+		};
+	}
+})();
+
 /**
  * Created by mabdurashidov on 2/21/2016.
  */
@@ -5350,108 +5422,6 @@ angular.module('mx.components', [
 
 })(window);
 
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxRating
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @scope {}
-	 * @description Rating with stars directive
-	 * @param {string} label@ - Text to be displayed with rating
-	 * @param {int} max@ - Maximum value
-	 * @param {int} value@ - Current value
-	 * @param {boolean} disabled= - Specifies if control is disabled
-	 * @usage <mx-rating label='Rate me' value='3' max='5'></mx-rating>
-	 */
-	angular.module('mx.components').directive('mxRating', MxRating);
-
-	RatingController.$inject = ['$scope'];
-
-	function RatingController($scope) {
-		var vm = this;
-
-		updateStars();
-
-		if (!vm.max) {
-			vm.max = 5;
-		}
-		vm._disabled = !!vm.disabled;
-
-		vm.toggle = function (index) {
-			if (vm._disabled !== true && vm.readOnly !== true) {
-				vm.value = index + 1;
-			}
-		};
-
-		$scope.$watch('vm.value', function (newValue) {
-			if (newValue) {
-				updateStars(newValue);
-			}
-		});
-
-		function updateStars(newValue) {
-			vm.stars = [];
-			for (var i = 0; i < vm.max; i++) {
-				vm.stars.push({
-					filled: i < newValue
-				});
-			}
-		}
-
-		return vm;
-	}
-
-	function MxRating() {
-		return {
-			restrict: 'E',
-			templateUrl: 'mx-rating/mx-rating.html',
-			scope: {},
-			controller: RatingController,
-			controllerAs: 'vm',
-			bindToController: {
-				value: '=',
-				max: '@',
-				disabled: '=',
-				label: '@',
-				readOnly: '='
-			}
-		};
-	}
-})();
-
-(function(w) {
-	'use strict';
-
-	MxNumericEditCtrl.$inject = ['mx.internationalization'];
-
-	function MxNumericEditCtrl(internationalization) {
-		mx.components.FormControlControllerBase.call(this, internationalization);
-		var vm = this;
-		vm.format = vm.format || mxNumericEditFormat.Integer;
-		return vm;
-	}
-
-	angular.module('mx.components').directive('mxNumericEdit', function() {
-		var directive = new mx.components.FormControlBase(MxNumericEditCtrl, 'mx-numeric-edit/mx-numeric-edit.html');
-		angular.extend(directive.bindToController, {format: '@'});
-		return directive;
-	});
-
-	var mxNumericEditFormat = {
-		Integer: 'integer',
-		Float: 'float'
-	};
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.Forms = w.mx.components.Forms || {};
-	w.mx.components.Forms.NumericEditFormat = mxNumericEditFormat;
-
-})(window);
-
 (function (w, a) {
 	'use strict';
 
@@ -5676,6 +5646,36 @@ angular.module('mx.components', [
 	w.mx.components = mx.components || {};
 	w.mx.components.masks = mx.components.masks || {};
 	w.mx.components.masks.Base = MxBaseMask;
+})(window);
+
+(function(w) {
+	'use strict';
+
+	MxNumericEditCtrl.$inject = ['mx.internationalization'];
+
+	function MxNumericEditCtrl(internationalization) {
+		mx.components.FormControlControllerBase.call(this, internationalization);
+		var vm = this;
+		vm.format = vm.format || mxNumericEditFormat.Integer;
+		return vm;
+	}
+
+	angular.module('mx.components').directive('mxNumericEdit', function() {
+		var directive = new mx.components.FormControlBase(MxNumericEditCtrl, 'mx-numeric-edit/mx-numeric-edit.html');
+		angular.extend(directive.bindToController, {format: '@'});
+		return directive;
+	});
+
+	var mxNumericEditFormat = {
+		Integer: 'integer',
+		Float: 'float'
+	};
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.Forms = w.mx.components.Forms || {};
+	w.mx.components.Forms.NumericEditFormat = mxNumericEditFormat;
+
 })(window);
 
 (function () {
@@ -9673,6 +9673,48 @@ angular.module('mx.components', [
 
 	/**
 	 * @ngdoc directive
+	 * @name mx.components:mxButton
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @scope {}
+	 * @description Custom button directive
+	 * @param {string} label@ - Text to be displayed on button
+	 * @param {string} icon@ - Name of Material Design icon to be displayed on button
+	 * @param {string} styles@ - Styles to be applied to button <br /><i>Default: md-raised md-primary</i>
+	 * @param {bool} focused@ - If true, a button should have input focus when the page loads <br /><i>Default: false</i>
+	 * @param {function} click& - Button click handler
+	 * @param {boolean} isDisabled= - Specifies if button is disabled
+	 * @usage <mx-button click='clickFn' label='A button' icon='check' focused='false' styles='btn-style'></mx-button>
+	 */
+	angular.module('mx.components').directive('mxButton', function () {
+		MxButtonCtrl.$inject = [];
+
+		function MxButtonCtrl() {
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				label: '@',
+				icon: '@',
+				styles: '@',
+				click: '&',
+				focused: '@',
+				isDisabled: '='
+			},
+			controller: MxButtonCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-button/mx-button.html'
+		};
+	});
+})();
+
+(function () {
+	'use strict';
+
+	/**
+	 * @ngdoc directive
 	 * @name mx.components:mxCalendar
 	 * @module mx.components
 	 * @restrict E
@@ -9922,48 +9964,6 @@ angular.module('mx.components', [
 			controller: MxCalendarCtrl,
 			controllerAs: 'vm',
 			templateUrl: 'mx-calendar/mx-calendar.html'
-		};
-	});
-})();
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxButton
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @scope {}
-	 * @description Custom button directive
-	 * @param {string} label@ - Text to be displayed on button
-	 * @param {string} icon@ - Name of Material Design icon to be displayed on button
-	 * @param {string} styles@ - Styles to be applied to button <br /><i>Default: md-raised md-primary</i>
-	 * @param {bool} focused@ - If true, a button should have input focus when the page loads <br /><i>Default: false</i>
-	 * @param {function} click& - Button click handler
-	 * @param {boolean} isDisabled= - Specifies if button is disabled
-	 * @usage <mx-button click='clickFn' label='A button' icon='check' focused='false' styles='btn-style'></mx-button>
-	 */
-	angular.module('mx.components').directive('mxButton', function () {
-		MxButtonCtrl.$inject = [];
-
-		function MxButtonCtrl() {
-		}
-
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				label: '@',
-				icon: '@',
-				styles: '@',
-				click: '&',
-				focused: '@',
-				isDisabled: '='
-			},
-			controller: MxButtonCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-button/mx-button.html'
 		};
 	});
 })();
@@ -14554,7 +14554,7 @@ $templateCache.put("mx-image-preview/mx-image-preview.html","<md-dialog aria-lab
 $templateCache.put("mx-journal/mx-journal.html","<div class=\"journal-container\"><div class=\"journal-container--items\"><div ng-repeat=\"item in vm.items\" class=\"journal-item\" layout=\"column\" ng-class=\"{ \'journal-item--my\':item.__my, \'journal-item--first\':item.__first }\"><div><div class=\"journal-item__user\"><div layout=\"row\"><div ng-init=\"userPhoto = item.photo\"><img ng-show=\"userPhoto\" ng-src=\"{{::userPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!userPhoto\" class=\"journal-item__photo-letter journal-item__photo\">{{::item.userName | limitTo:1}}</span></div><div class=\"journal-item__user-name\" flex=\"\">{{::item.userName}}</div></div></div><div class=\"journal-item__date\">{{::item.__created | date:\'medium\'}}</div></div><div class=\"journal-item__content\"><p ng-bind-html=\"item.text\"></p></div></div><div class=\"journal-container--load-more\" ng-show=\"vm.canLoadMore && !vm.processingItems\"><md-button ng-click=\"vm.loadMoreItems()\">{{\'components.journal.load_more_items\' | mxi18n}}</md-button></div><div class=\"journal-container--load-more\" ng-show=\"vm.processingItems\">{{\'components.journal.loading\' | mxi18n}}</div></div><div class=\"journal-item--new journal-item\" ng-if=\"!vm.readOnly\"><div ng-init=\"myPhoto = vm.currentUserPhoto\" class=\"journal-item__photo-wrapper\"><img ng-show=\"myPhoto\" ng-src=\"{{::myPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!myPhoto\" class=\"journal-item__photo-letter journal-item__photo\">Y</span></div><div ng-if=\"vm._showRichEditor\"><mx-rich-text-box class=\"journal-item--new-textarea\" ng-model=\"vm.newComment\" advanced-mode=\"false\" set-focus=\"true\" on-blur=\"vm._handleRichTextBoxBlur()\"></mx-rich-text-box><md-button class=\"journal-item--new__content-button\" ng-click=\"vm.addComment();\" title=\"{{\'components.journal.send_button_label\' | mxi18n}}\" ng-disabled=\"vm.adding || vm.newComment===\'\' && vm.attachments.length === 0\" aria-label=\"{{\'components.journal.send_button_label\' | mxi18n}}\">{{\'components.journal.send_button_label\' | mxi18n}}</md-button><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button></div><div ng-show=\"!vm._showRichEditor\" class=\"journal-item--new-textarea-placeholder\" ng-click=\"vm._showRichEditor = true;\"><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__preview-attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button>{{\'components.journal.write_your_comment\' | mxi18n}}</div><ul class=\"journal-item--new-attachments-list\"><li ng-repeat=\"file in vm.attachments\"><md-icon>insert_drive_file</md-icon>{{::file.DisplayString}}</li></ul></div></div>");
 $templateCache.put("mx-numeric-edit/mx-numeric-edit.html","<md-input-container md-is-error=\"vm.controlNgModel.mxInvalid\"><label>{{vm.label}}</label> <input name=\"{{::vm.name}}\" mx-mask=\"{{::vm.format}}\" ng-model=\"vm.model\" ng-disabled=\"vm._disabled\" ng-readonly=\"vm._readOnly\"><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container>");
 $templateCache.put("mx-picker/mx-autocomplete.html","<md-autocomplete md-items=\"item in vm.autoCompleteSearch()\" md-search-text=\"vm.autoCompleteSearchText\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-item-text=\"vm.getTitle(item)\" md-no-cache=\"true\" md-floating-label=\"{{vm.label}}\" ng-disabled=\"vm._disabled || vm._readOnly\" md-min-length=\"0\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\"><md-item-template><span md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}</span></md-not-found><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-autocomplete>");
-$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\"><md-input-container ng-class=\"{ \'disabled\': vm._disabled, \'readonly\': vm._readOnly }\"><md-chips md-autocomplete-snap=\"\" md-on-add=\"vm.onSelectionChange()\" md-on-remove=\"vm.onSelectionChange()\" md-require-match=\"true\" ng-model=\"vm.selectedItems\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete md-floating-label=\"{{ vm.controlLabel }}\" input-name=\"{{::vm.internalName}}\" md-delay=\"vm.loadDelay\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-item-text=\"vm.getTitle(item)\" md-items=\"item in vm.autoCompleteSearch()\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\" md-min-length=\"1\" md-autoselect=\"true\" md-no-cache=\"true\" md-search-text=\"vm.autoCompleteSearchText\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-select-on-match=\"true\" md-match-case-insensitive=\"true\" spellcheck=\"false\"><md-item-template><span class=\"item-title\"><span md-highlight-flags=\"^i\" md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span> <span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
+$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\"><md-input-container ng-class=\"{ \'disabled\': vm._disabled, \'readonly\': vm._readOnly }\"><md-chips md-autocomplete-snap=\"\" md-on-add=\"vm.onSelectionChange()\" md-on-remove=\"vm.onSelectionChange()\" md-require-match=\"true\" ng-model=\"vm.selectedItems\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete md-floating-label=\"{{ vm.controlLabel }}\" input-name=\"{{::vm.internalName}}\" md-delay=\"vm.loadDelay\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-item-text=\"vm.getTitle(item)\" md-items=\"item in vm.autoCompleteSearch()\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\" md-min-length=\"0\" md-autoselect=\"true\" md-no-cache=\"true\" md-search-text=\"vm.autoCompleteSearchText\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-select-on-match=\"true\" md-match-case-insensitive=\"true\" spellcheck=\"false\"><md-item-template><span class=\"item-title\"><span md-highlight-flags=\"^i\" md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span> <span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
 $templateCache.put("mx-picker/mx-select.html","<md-input-container><label>{{vm.label}}</label><md-select ng-model-options=\"{ trackBy: \'vm.getTrackingValue($value)\' }\" ng-model=\"vm.selectModel\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-readonly=\"vm._readOnly\"><md-option ng-value=\"vm.getId(item)\" ng-repeat=\"item in vm.items\">{{vm.getTitle(item)}}</md-option></md-select><mx-control-errors></mx-control-errors></md-input-container>");
 $templateCache.put("mx-rating/mx-rating.html","<label>{{vm.label}}</label><div class=\"mx-rating\" ng-class=\"[vm._disabled ? \'mx-rating--disabled\' : \'\']\"><md-icon class=\"mx-rating--star\" ng-repeat=\"star in vm.stars\" ng-class=\"{\'mx-rating--star-filled\': star.filled }\" ng-click=\"vm.toggle($index)\">star</md-icon></div>");
 $templateCache.put("mx-repeater/mx-repeater.html","<div class=\"mx-repeater\" flex=\"\"><div flex=\"\" class=\"mx-repeater--row\" ng-repeat=\"item in __$vm.entities\"><div class=\"mx-repeater--panel\" flex=\"\" ng-include=\"\" src=\"__$vm.templateId\" data-onload=\"__$vm.initScope()\"></div></div></div>");

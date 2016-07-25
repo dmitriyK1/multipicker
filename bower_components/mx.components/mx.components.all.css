@@ -2261,33 +2261,13 @@ button.md-button.md-icon-button.journal-item--new__preview-attach-button {
   font-size: 2em;
   color: #c1c8cb; }
 
-.mx-rating {
-  margin: 0;
-  padding: 0;
-  display: inline-block; }
-  .mx-rating .mx-rating--star {
-    padding: .1rem;
-    outline: none;
-    font-size: 20px;
-    text-shadow: .05em .05em #aaa;
-    list-style-type: none;
-    display: inline-block;
-    cursor: pointer;
-    color: #c1c8cb; }
-    .mx-rating .mx-rating--star.mx-rating--star-filled, .mx-rating .mx-rating--star:hover {
-      color: #fc994d; }
-  .mx-rating.mx-rating--disabled {
-    pointer-events: none; }
-    .mx-rating.mx-rating--disabled .mx-rating--star-filled {
-      color: #75848b; }
-
 .md-autocomplete-suggestions-container.md-default-theme li,
 .md-autocomplete-suggestions-container li {
   color: #757575; }
 
 .md-autocomplete-suggestions-container.md-default-theme li .highlight,
 .md-autocomplete-suggestions-container li .highlight {
-  color: rgba(0, 0, 0, 0.87); }
+  color: #000000; }
 
 mx-multi-picker .mx-multipicker--container .md-chips .md-chip.md-focused {
   border-radius: 2px; }
@@ -2305,7 +2285,7 @@ mx-multi-picker md-chip-template {
 mx-multi-picker md-chips .md-chip.md-focused md-icon {
   color: rgba(0, 0, 0, 0.12); }
   mx-multi-picker md-chips .md-chip.md-focused md-icon:hover {
-    color: rgba(0, 0, 0, 0.84); }
+    color: #000000; }
 
 mx-multi-picker.ng-invalid-required md-chips .md-chips {
   box-shadow: 0 1px #fb4848; }
@@ -2344,10 +2324,10 @@ mx-multi-picker .mx-multipicker--container .md-chips .md-chip-input-container {
   overflow: visible; }
   mx-multi-picker .mx-multipicker--container .md-chips .md-chip-input-container input {
     margin-top: -18px;
-    color: rgba(0, 0, 0, 0.87); }
+    color: #000000; }
 
 mx-multi-picker md-input-container:not(.md-input-invalid).md-input-focused [disabled] label {
-  color: rgba(0, 0, 0, 0.26); }
+  color: #000000; }
 
 mx-multi-picker md-input-container label:not(.md-no-float):not(.md-container-ignore),
 mx-multi-picker md-input-container .md-placeholder {
@@ -2359,17 +2339,12 @@ mx-multi-picker .mx-multipicker--container md-chips .item-title {
 
 mx-multi-picker .mx-multipicker--container .md-chips .md-chip a {
   border-bottom: 1px solid #fc8529;
-  transition: border-bottom-color 0.25s ease-in-out, color 0.25s ease-in-out;
   -webkit-user-select: none;
   user-select: none;
   cursor: pointer; }
   mx-multi-picker .mx-multipicker--container .md-chips .md-chip a:hover {
     color: #0399d7;
     border-bottom-color: #0399d7; }
-
-mx-multi-picker .mx-multipicker--container .md-chips .md-chip:hover,
-mx-multi-picker .mx-multipicker--container .md-chips .md-chip.md-focused {
-  transition: background 0.25s ease-in; }
 
 mx-autocomplete md-input-container {
   margin-top: 0 !important; }
@@ -2511,6 +2486,26 @@ mx-select .md-select-value {
 
 mx-select md-input-container {
   margin-top: 16px; }
+
+.mx-rating {
+  margin: 0;
+  padding: 0;
+  display: inline-block; }
+  .mx-rating .mx-rating--star {
+    padding: .1rem;
+    outline: none;
+    font-size: 20px;
+    text-shadow: .05em .05em #aaa;
+    list-style-type: none;
+    display: inline-block;
+    cursor: pointer;
+    color: #c1c8cb; }
+    .mx-rating .mx-rating--star.mx-rating--star-filled, .mx-rating .mx-rating--star:hover {
+      color: #fc994d; }
+  .mx-rating.mx-rating--disabled {
+    pointer-events: none; }
+    .mx-rating.mx-rating--disabled .mx-rating--star-filled {
+      color: #75848b; }
 
 mx-rich-text-box[disabled] {
   pointer-events: none;
