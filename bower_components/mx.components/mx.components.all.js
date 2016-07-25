@@ -880,26 +880,6 @@ angular.module('mx.components', [
 
 })();
 
-(function () {
-	'use strict';
-
-	MxTextAreaCtrl.$inject = ['mx.internationalization'];
-
-	function MxTextAreaCtrl(internationalization) {
-		mx.components.FormControlControllerBase.call(this, internationalization);
-		this.rows = this.rows || 4;
-		return this;
-	}
-
-	angular.module('mx.components').directive('mxTextArea', function () {
-		var directive = new mx.components.FormControlBase(MxTextAreaCtrl, 'mx-text-area/mx-text-area.html');
-		angular.extend(directive.bindToController, {
-			rows: '@'
-		});
-		return directive;
-	});
-})();
-
 (function (w) {
 	'use strict';
 
@@ -962,6 +942,26 @@ angular.module('mx.components', [
 	w.mx.components.Forms = w.mx.components.Forms || {};
 })(window);
 
+
+(function () {
+	'use strict';
+
+	MxTextAreaCtrl.$inject = ['mx.internationalization'];
+
+	function MxTextAreaCtrl(internationalization) {
+		mx.components.FormControlControllerBase.call(this, internationalization);
+		this.rows = this.rows || 4;
+		return this;
+	}
+
+	angular.module('mx.components').directive('mxTextArea', function () {
+		var directive = new mx.components.FormControlBase(MxTextAreaCtrl, 'mx-text-area/mx-text-area.html');
+		angular.extend(directive.bindToController, {
+			rows: '@'
+		});
+		return directive;
+	});
+})();
 
 (function () {
 	'use strict';
@@ -4240,6 +4240,41 @@ angular.module('mx.components', [
 // jshint ignore: end
 // jscs:enable
 
+(function () {
+	'use strict';
+	function mxRepeater() {
+
+		MxRepeaterCtrl.$inject = ['$scope'];
+
+		function MxRepeaterCtrl($scope) {
+			var __$vm = this;
+			__$vm.initScope = function () {
+				if (__$vm.parentControllerAs) {
+					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
+				} else {
+					$scope.dataModel = $scope.$parent;
+				}
+			};
+		}
+
+		return {
+			restrict: 'E',
+			scope: {
+				entity: '=' /* object used in scopes of templates */
+			},
+			bindToController: {
+				entities: '=',
+				templateId: '@',
+				parentControllerAs: '@'
+			},
+			templateUrl: 'mx-repeater/mx-repeater.html',
+			controller: MxRepeaterCtrl,
+			controllerAs: '__$vm'
+		};
+	}
+
+	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
+})();
 (function (w) {
 	'use strict';
 
@@ -5387,41 +5422,6 @@ angular.module('mx.components', [
 
 })(window);
 
-(function () {
-	'use strict';
-	function mxRepeater() {
-
-		MxRepeaterCtrl.$inject = ['$scope'];
-
-		function MxRepeaterCtrl($scope) {
-			var __$vm = this;
-			__$vm.initScope = function () {
-				if (__$vm.parentControllerAs) {
-					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
-				} else {
-					$scope.dataModel = $scope.$parent;
-				}
-			};
-		}
-
-		return {
-			restrict: 'E',
-			scope: {
-				entity: '=' /* object used in scopes of templates */
-			},
-			bindToController: {
-				entities: '=',
-				templateId: '@',
-				parentControllerAs: '@'
-			},
-			templateUrl: 'mx-repeater/mx-repeater.html',
-			controller: MxRepeaterCtrl,
-			controllerAs: '__$vm'
-		};
-	}
-
-	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
-})();
 (function(w) {
 	'use strict';
 
@@ -6009,65 +6009,6 @@ angular.module('mx.components', [
 
 })();
 
-(function (w) {
-	'use strict';
-
-	function LazyLoad(src) {
-		var script = document.createElement('script');
-		script.type = 'text/javascript';
-		script.async = true;
-		script.src = '/' + src;
-		var first = document.getElementsByTagName('script')[0];
-		first.parentNode.insertBefore(script, first);
-	}
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.LazyLoad = LazyLoad;
-
-
-//	function MxLazyLoadCtrl(){
-//		return this;
-//	}
-//
-//	angular.module('mx.components').directive('mxLazyLoad', function() {
-//		return {
-//			restrict: 'E',
-//			scope: false,
-////			replace:true,
-//			controller:MxLazyLoadCtrl,
-//			controllerAs: 'vm',
-//			bindToController: {
-//				src:'@'
-//			},
-//			template: function(elem, attrs){
-//				return '<script src="' + attrs.src + '"></script>';
-//			} ,
-//			link: function(scope, elem, attr) {
-//				var code = elem.text();
-//				var f = new Function(code);// jshint ignore:line
-//				f();
-//			}
-//		};
-//	});
-
-
-	angular.module('mx.components').directive('mxLazyLoad', function () {
-		return {
-			restrict: 'A',
-			scope: false,
-			link: function (/*scope, elem, attr*/) {
-				//if(attr.type === 'text/javascript-lazy'){
-				//	var code = elem.text();
-				//	var f = new Function(code);// jshint ignore:line
-				//	f();
-				//}
-			}
-		};
-	});
-
-}(window));
-
 (function () {
 	'use strict';
 
@@ -6308,6 +6249,65 @@ angular.module('mx.components', [
 		};
 	});
 })();
+
+(function (w) {
+	'use strict';
+
+	function LazyLoad(src) {
+		var script = document.createElement('script');
+		script.type = 'text/javascript';
+		script.async = true;
+		script.src = '/' + src;
+		var first = document.getElementsByTagName('script')[0];
+		first.parentNode.insertBefore(script, first);
+	}
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.LazyLoad = LazyLoad;
+
+
+//	function MxLazyLoadCtrl(){
+//		return this;
+//	}
+//
+//	angular.module('mx.components').directive('mxLazyLoad', function() {
+//		return {
+//			restrict: 'E',
+//			scope: false,
+////			replace:true,
+//			controller:MxLazyLoadCtrl,
+//			controllerAs: 'vm',
+//			bindToController: {
+//				src:'@'
+//			},
+//			template: function(elem, attrs){
+//				return '<script src="' + attrs.src + '"></script>';
+//			} ,
+//			link: function(scope, elem, attr) {
+//				var code = elem.text();
+//				var f = new Function(code);// jshint ignore:line
+//				f();
+//			}
+//		};
+//	});
+
+
+	angular.module('mx.components').directive('mxLazyLoad', function () {
+		return {
+			restrict: 'A',
+			scope: false,
+			link: function (/*scope, elem, attr*/) {
+				//if(attr.type === 'text/javascript-lazy'){
+				//	var code = elem.text();
+				//	var f = new Function(code);// jshint ignore:line
+				//	f();
+				//}
+			}
+		};
+	});
+
+}(window));
 
 (function () {
 	'use strict';
@@ -6868,203 +6868,16 @@ angular.module('mx.components', [
 		}]);
 })();
 
-(function (){
-    'use strict';
+(function () {
+	'use strict';
 
-    angular.module('mx.components')
-    /**
-     * @ngdoc directive
-     * @name mx.components:mxIconPicker
-     * @module mx.components
-     * @restrict 'E'
-     * @description
-     * The mx-icon-picker control is used to create a picker where the user can select icons.
-     *
-     * The example below demonstrates some of the attributes you may use with the Picker control:
-     * @param {string} name@ - The name property sets or returns the value of the name attribute of a mxIconPicker.
-     * @param {string} label@ - Defines control label displayed on the form.
-     * @param {boolean} ng-required= - The required property sets or returns whether a mxPicker must be filled out before submitting a form.
-     * @param {boolean} disabled= - The disabled property sets or returns whether a mxPicker should be disabled, or not.
-     * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxPicker should be read-only.
-     * @param {object} model=ngModel - directive binds element to the object in the model.
-     * @param {expression} onChange& - on change callback
-     * @usage <mx-icon-picker ng-model="vm.pickerValue" ng-required="true" data-label="Classic, predfined items" > </mx-icon-picker>
-     */
-        .directive('mxIconPicker', function () {
-            return new mx.components.FormControlBase(MxIconPickerCtrl, 'mx-icon-picker/mx-icon-picker.html');
-        });
+	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
+		function mxi18nFilter(string, defaultText) {
+			return internationalization.get(string, defaultText);
+		}
 
-
-    MxIconPickerCtrl.$inject = ['$timeout', '$document', '$q', '$scope','mx.internationalization'];
-
-    function MxIconPickerCtrl($timeout, $document, $q, $scope, internationalization) {
-
-        mx.components.FormControlControllerBase.call(this, internationalization, $timeout);
-
-        var vm = this;
-        var typing = 0;
-
-        vm.innerClick = innerClick;
-        vm.apply = applyIcon;
-        vm.activate = activate;
-        vm.close = closePanel;
-        vm.clear = clear;
-
-
-        vm.active = false;
-        vm.itemsFound = true;
-
-        $scope.$watch('vm.model', function(model){
-            vm.text = model;
-            // validate?
-            initIcon(model);
-        });
-
-        $scope.$watch('vm.text', function(text){
-
-            if (!vm.library) {
-                return;
-            }
-
-
-
-            search(text);
-
-        });
-
-        return vm;
-
-
-        function initIcon(iconId){
-            if (iconId) {
-                return mx.components.Icons.some(function(cat) {
-                    return cat.icons.some(function (icon) {
-                        if (icon.id === iconId) {
-                            vm.icon = icon.id;
-                            return true;
-                        }
-                    });
-                });
-            } else {
-                vm.icon = '';
-                return false;
-            }
-        }
-
-
-        function innerClick(event){
-            if (event){
-                event.stopPropagation();
-            }
-        }
-
-        function activate(event){
-
-            if (event){
-                event.stopPropagation();
-            }
-
-            if (vm._readOnly || vm._disabled) {
-                return;
-            }
-
-            $document.bind('click', closePanel);
-
-            initLibrary();
-
-            $timeout(function() {
-                vm.active = true;
-            });
-        }
-
-        function initLibrary(){
-            vm.library = vm.library || mx.components.Icons.map(function(cat) {
-                cat.icons.forEach(function(icon) {
-                    icon.visible = true;
-                });
-                return {
-                    name:cat.name,
-                    visible: true,
-                    icons: cat.icons.map(function(icon){
-                        return { visible: true, icon: icon};
-                    })
-                };
-            });
-        }
-
-        function closePanel() {
-            $document.unbind('click', closePanel);
-
-            $timeout(function(){
-                vm.text = vm.model;
-                vm.active = false;
-            });
-        }
-        function search(text) {
-
-            typing++;
-            var i = typing;
-
-            setTimeout(function(){
-
-                if (i === typing) {
-                    typing = 0;
-
-                    if (vm.model === vm.text) {
-                        text = '';
-                    }
-                    var found = false;
-                    text = (text || '').toLowerCase();
-
-                    vm.library.forEach(function(category){
-
-                        var catVisible = false;
-                        category.icons.forEach(function(item) {
-                            item.visible = item.icon.name.indexOf(text) !== -1 || item.icon.id.indexOf(text) !== -1;
-                            catVisible = catVisible || item.visible;
-                        });
-
-                        category.visible = catVisible;
-                        found = found || category.visible;
-                    });
-                    vm.itemsFound = found;
-                    $scope.$apply();
-                }
-            }, 200);
-
-        }
-
-        function clear(event) {
-
-            if (event){
-                event.stopPropagation();
-            }
-
-            vm.text = '';
-            vm.icon = '';
-            vm.model = '';
-
-            closePanel();
-        }
-
-        function applyIcon(event, icon) {
-
-            if (event){
-                event.stopPropagation();
-            }
-
-            vm.model = icon.id;
-            if (vm.text === icon.id) {
-                search('');
-            } else {
-                vm.text = icon.id;
-            }
-
-            vm.icon = icon.id;
-
-            closePanel();
-        }
-    }
+		return mxi18nFilter;
+	}]);
 
 })();
 
@@ -7898,16 +7711,203 @@ angular.module('mx.components', [
 
 })();
 
-(function () {
-	'use strict';
+(function (){
+    'use strict';
 
-	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
-		function mxi18nFilter(string, defaultText) {
-			return internationalization.get(string, defaultText);
-		}
+    angular.module('mx.components')
+    /**
+     * @ngdoc directive
+     * @name mx.components:mxIconPicker
+     * @module mx.components
+     * @restrict 'E'
+     * @description
+     * The mx-icon-picker control is used to create a picker where the user can select icons.
+     *
+     * The example below demonstrates some of the attributes you may use with the Picker control:
+     * @param {string} name@ - The name property sets or returns the value of the name attribute of a mxIconPicker.
+     * @param {string} label@ - Defines control label displayed on the form.
+     * @param {boolean} ng-required= - The required property sets or returns whether a mxPicker must be filled out before submitting a form.
+     * @param {boolean} disabled= - The disabled property sets or returns whether a mxPicker should be disabled, or not.
+     * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxPicker should be read-only.
+     * @param {object} model=ngModel - directive binds element to the object in the model.
+     * @param {expression} onChange& - on change callback
+     * @usage <mx-icon-picker ng-model="vm.pickerValue" ng-required="true" data-label="Classic, predfined items" > </mx-icon-picker>
+     */
+        .directive('mxIconPicker', function () {
+            return new mx.components.FormControlBase(MxIconPickerCtrl, 'mx-icon-picker/mx-icon-picker.html');
+        });
 
-		return mxi18nFilter;
-	}]);
+
+    MxIconPickerCtrl.$inject = ['$timeout', '$document', '$q', '$scope','mx.internationalization'];
+
+    function MxIconPickerCtrl($timeout, $document, $q, $scope, internationalization) {
+
+        mx.components.FormControlControllerBase.call(this, internationalization, $timeout);
+
+        var vm = this;
+        var typing = 0;
+
+        vm.innerClick = innerClick;
+        vm.apply = applyIcon;
+        vm.activate = activate;
+        vm.close = closePanel;
+        vm.clear = clear;
+
+
+        vm.active = false;
+        vm.itemsFound = true;
+
+        $scope.$watch('vm.model', function(model){
+            vm.text = model;
+            // validate?
+            initIcon(model);
+        });
+
+        $scope.$watch('vm.text', function(text){
+
+            if (!vm.library) {
+                return;
+            }
+
+
+
+            search(text);
+
+        });
+
+        return vm;
+
+
+        function initIcon(iconId){
+            if (iconId) {
+                return mx.components.Icons.some(function(cat) {
+                    return cat.icons.some(function (icon) {
+                        if (icon.id === iconId) {
+                            vm.icon = icon.id;
+                            return true;
+                        }
+                    });
+                });
+            } else {
+                vm.icon = '';
+                return false;
+            }
+        }
+
+
+        function innerClick(event){
+            if (event){
+                event.stopPropagation();
+            }
+        }
+
+        function activate(event){
+
+            if (event){
+                event.stopPropagation();
+            }
+
+            if (vm._readOnly || vm._disabled) {
+                return;
+            }
+
+            $document.bind('click', closePanel);
+
+            initLibrary();
+
+            $timeout(function() {
+                vm.active = true;
+            });
+        }
+
+        function initLibrary(){
+            vm.library = vm.library || mx.components.Icons.map(function(cat) {
+                cat.icons.forEach(function(icon) {
+                    icon.visible = true;
+                });
+                return {
+                    name:cat.name,
+                    visible: true,
+                    icons: cat.icons.map(function(icon){
+                        return { visible: true, icon: icon};
+                    })
+                };
+            });
+        }
+
+        function closePanel() {
+            $document.unbind('click', closePanel);
+
+            $timeout(function(){
+                vm.text = vm.model;
+                vm.active = false;
+            });
+        }
+        function search(text) {
+
+            typing++;
+            var i = typing;
+
+            setTimeout(function(){
+
+                if (i === typing) {
+                    typing = 0;
+
+                    if (vm.model === vm.text) {
+                        text = '';
+                    }
+                    var found = false;
+                    text = (text || '').toLowerCase();
+
+                    vm.library.forEach(function(category){
+
+                        var catVisible = false;
+                        category.icons.forEach(function(item) {
+                            item.visible = item.icon.name.indexOf(text) !== -1 || item.icon.id.indexOf(text) !== -1;
+                            catVisible = catVisible || item.visible;
+                        });
+
+                        category.visible = catVisible;
+                        found = found || category.visible;
+                    });
+                    vm.itemsFound = found;
+                    $scope.$apply();
+                }
+            }, 200);
+
+        }
+
+        function clear(event) {
+
+            if (event){
+                event.stopPropagation();
+            }
+
+            vm.text = '';
+            vm.icon = '';
+            vm.model = '';
+
+            closePanel();
+        }
+
+        function applyIcon(event, icon) {
+
+            if (event){
+                event.stopPropagation();
+            }
+
+            vm.model = icon.id;
+            if (vm.text === icon.id) {
+                search('');
+            } else {
+                vm.text = icon.id;
+            }
+
+            vm.icon = icon.id;
+
+            closePanel();
+        }
+    }
 
 })();
 
@@ -8245,54 +8245,6 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
-	angular.module('mx.components').directive('mxFileUploader', function () {
-
-		MxFileUploaderCtrl.$inject = [];
-
-		function MxFileUploaderCtrl() {
-			var vm = this;
-
-			vm.files = vm.files || [];
-
-			vm.filesSelected = filesSelected;
-			vm.removeFile = removeFile;
-
-			return vm;
-
-			function filesSelected(files) {
-				if (!files || !files.length) {
-					return;
-				}
-				for (var i = 0; i < files.length; i++) {
-					vm.files.push(files[i]);
-				}
-			}
-
-			function removeFile(file) {
-				var index = vm.files.indexOf(file);
-				if (index !== -1) {
-					vm.files.splice(index, 1);
-				}
-			}
-
-		}
-
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				files: '='
-			},
-			controller: MxFileUploaderCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-file-uploader/mx-file-uploader.html'
-		};
-	});
-})();
-
-(function () {
-	'use strict';
-
 	MxFormCtrl.$inject = [];
 
 	function MxFormCtrl() {
@@ -8625,6 +8577,54 @@ angular.module('mx.components', [
 				link: link
 			};
 		}]);
+})();
+
+(function () {
+	'use strict';
+
+	angular.module('mx.components').directive('mxFileUploader', function () {
+
+		MxFileUploaderCtrl.$inject = [];
+
+		function MxFileUploaderCtrl() {
+			var vm = this;
+
+			vm.files = vm.files || [];
+
+			vm.filesSelected = filesSelected;
+			vm.removeFile = removeFile;
+
+			return vm;
+
+			function filesSelected(files) {
+				if (!files || !files.length) {
+					return;
+				}
+				for (var i = 0; i < files.length; i++) {
+					vm.files.push(files[i]);
+				}
+			}
+
+			function removeFile(file) {
+				var index = vm.files.indexOf(file);
+				if (index !== -1) {
+					vm.files.splice(index, 1);
+				}
+			}
+
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				files: '='
+			},
+			controller: MxFileUploaderCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-file-uploader/mx-file-uploader.html'
+		};
+	});
 })();
 
 (function () {
@@ -9423,6 +9423,40 @@ angular.module('mx.components', [
 (function () {
 	'use strict';
 
+	MxCurrencyController.$inject = ['mx.internationalization'];
+
+	function MxCurrencyController(internationalization) {
+		var vm = this;
+		mx.components.FormControlControllerBase.call(vm, internationalization);
+		vm.validationPattern = /^(:?\d+)?\.?\d+?$/;
+		return vm;
+	}
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxCurrency
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @description
+	 * The mx-currency control is used to display currency input field with currency code displayed.
+	 *
+	 * The control extends {@ref mx.components:FormControlBase FormControlBase} directive.
+	 *
+	 * @param {string} currencyCode@ - Currency code to be displayed.
+	 * @usage <mx-currency ng-model="vm.currencyValue" data-label="Currency editor" currency-code="{{vm.currencyCode}}"></mx-currency>
+	 */
+	angular.module('mx.components').directive('mxCurrency', function () {
+		var directive = new mx.components.FormControlBase(MxCurrencyController, 'mx-currency/mx-currency.html');
+		angular.extend(directive.bindToController, {
+			currencyCode: '@'
+		});
+		return directive;
+	});
+})();
+
+(function () {
+	'use strict';
+
 	var standardPageSizes = [10, 20, 50, 100];
 	angular.module('mx.components')
 		.directive('mxWorkspaceCommonPagingPanel', function () {
@@ -9612,40 +9646,6 @@ angular.module('mx.components', [
 
 	angular.module('mx.components').directive('mxChoice', [mxChoice]);
 
-})();
-
-(function () {
-	'use strict';
-
-	MxCurrencyController.$inject = ['mx.internationalization'];
-
-	function MxCurrencyController(internationalization) {
-		var vm = this;
-		mx.components.FormControlControllerBase.call(vm, internationalization);
-		vm.validationPattern = /^(:?\d+)?\.?\d+?$/;
-		return vm;
-	}
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxCurrency
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @description
-	 * The mx-currency control is used to display currency input field with currency code displayed.
-	 *
-	 * The control extends {@ref mx.components:FormControlBase FormControlBase} directive.
-	 *
-	 * @param {string} currencyCode@ - Currency code to be displayed.
-	 * @usage <mx-currency ng-model="vm.currencyValue" data-label="Currency editor" currency-code="{{vm.currencyCode}}"></mx-currency>
-	 */
-	angular.module('mx.components').directive('mxCurrency', function () {
-		var directive = new mx.components.FormControlBase(MxCurrencyController, 'mx-currency/mx-currency.html');
-		angular.extend(directive.bindToController, {
-			currencyCode: '@'
-		});
-		return directive;
-	});
 })();
 
 (function () {
@@ -9966,154 +9966,6 @@ angular.module('mx.components', [
 			templateUrl: 'mx-button/mx-button.html'
 		};
 	});
-})();
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxBottomSheet
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @scope {}
-	 * @description Custom bottom sheet directive
-	 * @usage <mx-bottom-sheet
-	 *        top-offset='24px'
-	 *        options='{
-	 *			icon:'apps',
-	 *			displayMode: 'grid',
-	 *			controller: 'BottomSheetController'*
-	 * 		}'>
-	 * </mx-bottom-sheet>
-	 * @param {string} top-offset= The offset regarding top position of his parent element:
-	 * @param {object} options= An options object, with the following properties:
-	 *   - `icon`        - `{string=}`: The icon to associate with button showing this bottom sheet.
-	 *   - `displayMode`- `{string=}`: Represents one of two modes of displaying: 'grid' or 'list'.
-	 *   - `controller` - `{string=}`: The controller to associate with this bottom sheet.
-	 */
-	angular.module('mx.components').directive('mxBottomSheet', [
-		'$http',
-		'$templateCache',
-		'$compile',
-		'$mdBottomSheet',
-		'$q',
-		'$window',
-		'$mdUtil',
-		'mx.internationalization',
-		function ($http, $templateCache, $compile, $mdBottomSheet, $q, $window, $mdUtil, internationalization) {
-
-			function MxBottomSheetCtrl() {
-				var vm = this;
-				vm.dialogActive = false;
-				vm.toggleDialog = toggleDialog;
-				vm.executeItem = executeItem;
-				vm.focusItem = focusItem;
-				vm.closeBottomSheet = closeBottomSheet;
-
-				var window = angular.element($window);
-				window.on('click', function ($event) {
-					if (vm.dialogActive) {
-						vm.closeBottomSheet();
-						$event.stopPropagation();
-					}
-				});
-
-				return vm;
-
-				function closeBottomSheet() {
-					if (vm.dialogActive) {
-						// $mdBottomSheet.hide();
-						$mdUtil.nextTick($mdBottomSheet.cancel, true);
-						vm.dialogActive = false;
-					}
-				}
-
-				function toggleDialog(options) {
-					if (vm.dialogActive) {
-						vm.closeBottomSheet();
-					}
-					else {
-						var _templateUrl = 'mx-bottom-sheet/' + (options.displayMode === 'grid' ? 'mx-bottom-sheet-grid-template.html' : 'mx-bottom-sheet-list-template.html');
-
-						$mdBottomSheet.show({
-							templateUrl: _templateUrl,
-							controller: options.controller,
-							//disableBackdrop: true,
-							disableParentScroll: false,
-							parent: vm.parent,
-							controllerAs: 'vm',
-							bindToController: true,
-							locals: {
-								execute: vm.executeItem,
-								focus: vm.focusItem,
-								topOffset: vm.topOffset
-							}
-						});
-
-						vm.dialogActive = true;
-					}
-				}
-
-				function executeItem(item) {
-					vm.closeBottomSheet();
-
-					if (angular.isDefined(item) && angular.isFunction(item.execute)) {
-						item.execute();
-					}
-				}
-
-				function focusItem(item) {
-					if (angular.isDefined(item) && angular.isDefined(item.isFocused)) {
-						return item.isFocused;
-					}
-
-					return false;
-				}
-			}
-
-			function link(scope, element, attr, vm) {
-				element.addClass('bottom-sheet-control-container');
-
-				var isEnabled = vm.isEnabled();
-				if (angular.isUndefined(isEnabled)) {
-					isEnabled = true;
-				}
-				if (!isEnabled) {
-					return;
-				}
-				isEnabled = $q.when(isEnabled);
-				isEnabled.then(function (value) {
-					if (!value) {
-						return;
-					}
-					$http.get('mx-bottom-sheet/mx-bottom-sheet.html', {cache: $templateCache}).then(function (response) {
-						var template = $compile(response.data)(scope);
-						element.append(template);
-						load(scope);
-					});
-				});
-
-				function load() {
-					vm.internationalization = internationalization.get('components.mx-bottom-sheet');
-
-					vm.parent = element[0];
-				}
-			}
-
-			return {
-				restrict: 'E',
-				scope: {
-					isEnabled: '&',
-					topOffset: '@',
-					options: '='
-				},
-				bindToController: true,
-				controller: MxBottomSheetCtrl,
-				controllerAs: 'vm',
-				link: link
-			};
-		}]);
 })();
 
 (function (w) {
@@ -10562,6 +10414,154 @@ angular.module('mx.components', [
 			};
 		}]);
 })(window);
+
+(function () {
+	'use strict';
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxBottomSheet
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @scope {}
+	 * @description Custom bottom sheet directive
+	 * @usage <mx-bottom-sheet
+	 *        top-offset='24px'
+	 *        options='{
+	 *			icon:'apps',
+	 *			displayMode: 'grid',
+	 *			controller: 'BottomSheetController'*
+	 * 		}'>
+	 * </mx-bottom-sheet>
+	 * @param {string} top-offset= The offset regarding top position of his parent element:
+	 * @param {object} options= An options object, with the following properties:
+	 *   - `icon`        - `{string=}`: The icon to associate with button showing this bottom sheet.
+	 *   - `displayMode`- `{string=}`: Represents one of two modes of displaying: 'grid' or 'list'.
+	 *   - `controller` - `{string=}`: The controller to associate with this bottom sheet.
+	 */
+	angular.module('mx.components').directive('mxBottomSheet', [
+		'$http',
+		'$templateCache',
+		'$compile',
+		'$mdBottomSheet',
+		'$q',
+		'$window',
+		'$mdUtil',
+		'mx.internationalization',
+		function ($http, $templateCache, $compile, $mdBottomSheet, $q, $window, $mdUtil, internationalization) {
+
+			function MxBottomSheetCtrl() {
+				var vm = this;
+				vm.dialogActive = false;
+				vm.toggleDialog = toggleDialog;
+				vm.executeItem = executeItem;
+				vm.focusItem = focusItem;
+				vm.closeBottomSheet = closeBottomSheet;
+
+				var window = angular.element($window);
+				window.on('click', function ($event) {
+					if (vm.dialogActive) {
+						vm.closeBottomSheet();
+						$event.stopPropagation();
+					}
+				});
+
+				return vm;
+
+				function closeBottomSheet() {
+					if (vm.dialogActive) {
+						// $mdBottomSheet.hide();
+						$mdUtil.nextTick($mdBottomSheet.cancel, true);
+						vm.dialogActive = false;
+					}
+				}
+
+				function toggleDialog(options) {
+					if (vm.dialogActive) {
+						vm.closeBottomSheet();
+					}
+					else {
+						var _templateUrl = 'mx-bottom-sheet/' + (options.displayMode === 'grid' ? 'mx-bottom-sheet-grid-template.html' : 'mx-bottom-sheet-list-template.html');
+
+						$mdBottomSheet.show({
+							templateUrl: _templateUrl,
+							controller: options.controller,
+							//disableBackdrop: true,
+							disableParentScroll: false,
+							parent: vm.parent,
+							controllerAs: 'vm',
+							bindToController: true,
+							locals: {
+								execute: vm.executeItem,
+								focus: vm.focusItem,
+								topOffset: vm.topOffset
+							}
+						});
+
+						vm.dialogActive = true;
+					}
+				}
+
+				function executeItem(item) {
+					vm.closeBottomSheet();
+
+					if (angular.isDefined(item) && angular.isFunction(item.execute)) {
+						item.execute();
+					}
+				}
+
+				function focusItem(item) {
+					if (angular.isDefined(item) && angular.isDefined(item.isFocused)) {
+						return item.isFocused;
+					}
+
+					return false;
+				}
+			}
+
+			function link(scope, element, attr, vm) {
+				element.addClass('bottom-sheet-control-container');
+
+				var isEnabled = vm.isEnabled();
+				if (angular.isUndefined(isEnabled)) {
+					isEnabled = true;
+				}
+				if (!isEnabled) {
+					return;
+				}
+				isEnabled = $q.when(isEnabled);
+				isEnabled.then(function (value) {
+					if (!value) {
+						return;
+					}
+					$http.get('mx-bottom-sheet/mx-bottom-sheet.html', {cache: $templateCache}).then(function (response) {
+						var template = $compile(response.data)(scope);
+						element.append(template);
+						load(scope);
+					});
+				});
+
+				function load() {
+					vm.internationalization = internationalization.get('components.mx-bottom-sheet');
+
+					vm.parent = element[0];
+				}
+			}
+
+			return {
+				restrict: 'E',
+				scope: {
+					isEnabled: '&',
+					topOffset: '@',
+					options: '='
+				},
+				bindToController: true,
+				controller: MxBottomSheetCtrl,
+				controllerAs: 'vm',
+				link: link
+			};
+		}]);
+})();
 
 (function () {
 	'use strict';
@@ -14550,11 +14550,11 @@ $templateCache.put("mx-grid/mx-grid-pager.html","<div role=\"contentinfo\" class
 $templateCache.put("mx-grid/mx-grid-viewport.html","<div role=\"rowgroup\" class=\"ui-grid-viewport\" ng-style=\"colContainer.getViewportStyle()\"><div class=\"ui-grid-canvas\"><div data-element-index=\"{{$index}}\" ng-mouseenter=\"grid.appScope.uiGirdSelectionHoverOnMouseEnter($event)\" ng-mouseleave=\"grid.appScope.uiGirdSelectionHoverOnMouseLeave($event)\" ng-click=\"grid.appScope.uiGridHandleItemClick(row)\" ng-class=\"{\'grid-row_active\' : row.__highlighted}\" ng-repeat=\"(rowRenderIndex, row) in rowContainer.renderedRows track by $index\" class=\"ui-grid-row\" ng-style=\"Viewport.rowStyle(rowRenderIndex)\"><div role=\"row\" ui-grid-row=\"row\" row-render-index=\"rowRenderIndex\"></div></div></div></div>");
 $templateCache.put("mx-grid/mx-grid.html","<div><div ng-if=\"grid.options.enableGridMenu\" role=\"rowgroup\" class=\"mx-grid-header-actions\"><div ui-grid-menu-button=\"\" ng-if=\"grid.options.enableGridMenu\"></div></div><div ui-i18n=\"en\" class=\"ui-grid\" ng-attr-highlightonclick=\"{{grid.appScope.highlightOnClick ? \'true\' : \'false\'}}\"><style ui-grid-style=\"\">\r\n		.grid{{ grid.id }} {\r\n		/* Styles for the grid */\r\n		}\r\n\r\n		.grid{{ grid.id }} .ui-grid-row, .grid{{ grid.id }} .ui-grid-cell, .grid{{ grid.id }} .ui-grid-cell .ui-grid-vertical-bar {\r\n		height: {{ grid.options.rowHeight }}px;\r\n		}\r\n\r\n		.grid{{ grid.id }} .ui-grid-row:last-child .ui-grid-cell {\r\n		border-bottom-width: {{ ((grid.getTotalRowHeight() < grid.getViewportHeight()) && \'1\') || \'0\' }}px;\r\n		}\r\n\r\n		{{ grid.verticalScrollbarStyles }}\r\n\r\n		{{ grid.horizontalScrollbarStyles }}\r\n\r\n/*\r\n        .ui-grid[dir=rtl] .ui-grid-viewport {\r\n          padding-left: {{ grid.verticalScrollbarWidth }}px;\r\n        }\r\n\r\n*/\r\n		{{ grid.customStyles }}\r\n	</style><div class=\"ui-grid-contents-wrapper\"><div ng-if=\"grid.hasLeftContainer()\" style=\"width: 0\" ui-grid-pinned-container=\"\'left\'\"></div><div ui-grid-render-container=\"\" container-id=\"\'body\'\" col-container-name=\"\'body\'\" row-container-name=\"\'body\'\" bind-scroll-horizontal=\"true\" bind-scroll-vertical=\"true\" enable-horizontal-scrollbar=\"grid.options.enableHorizontalScrollbar\" enable-vertical-scrollbar=\"grid.options.enableVerticalScrollbar\"></div><div ng-if=\"grid.hasRightContainer()\" style=\"width: 0\" ui-grid-pinned-container=\"\'right\'\"></div><div ui-grid-grid-footer=\"\" ng-if=\"grid.options.showGridFooter\"></div><div ui-grid-column-menu=\"\" ng-if=\"grid.options.enableColumnMenus\"></div><div ng-transclude=\"\"></div></div></div></div>");
 $templateCache.put("mx-icon-picker/mx-icon-picker.html","<div class=\"mx-icon-picker\" ng-class=\"{\'mx-icon-picker--empty\': !vm.model}\" ng-click=\"vm.innerClick($event)\"><md-input-container md-is-error=\"vm.controlNgModel.mxInvalid\"><label><span ng-bind-html=\"::vm.label\"></span></label> <span class=\"mx-icon-picker--icon-border\" ng-click=\"vm.activate($event)\"><md-icon ng-show=\"vm.icon\" class=\"mx-icon-picker--icon\">{{vm.icon}}</md-icon></span><md-icon ng-show=\"!vm._readOnly && !vm._disabled && vm.model\" class=\"mx-icon-picker--clear\" ng-click=\"vm.clear($event)\">clear</md-icon><input name=\"{{::vm.internalName}}\" ng-model=\"vm.text\" ng-disabled=\"vm._disabled\" class=\"mx-icon-picker--input\" ng-focus=\"vm.activate()\" ng-readonly=\"vm._readOnly\" ng-pattern=\"vm.pattern\"><mx-control-errors track-internal=\"{{::vm.trackInternal}}\"></mx-control-errors></md-input-container><div class=\"mx-icon-picker--library md-whiteframe-1dp\" ng-class=\"{\'mx-icon-picker--library__active\': vm.active}\"><div ng-show=\"!vm.itemsFound\" class=\"layout-column mx-icon-picker--library__empty-search\"><md-icon>block</md-icon><h4 flex=\"\">{{\'components.common.noData\' | mxi18n}}</h4></div><div ng-repeat=\"category in vm.library\" class=\"mx-icon-picker--library-category\" ng-show=\"category.visible\"><h3>{{::category.name}}</h3><div ng-repeat=\"item in category.icons track by item.icon.id\" title=\"{{::item.icon.name}}\" ng-click=\"vm.apply($event, item.icon)\" class=\"mx-icon-picker--library-icon\" ng-show=\"item.visible\"><md-icon>{{::item.icon.id}}</md-icon><span>{{::item.icon.name}}</span></div></div></div></div>");
-$templateCache.put("mx-image-preview/mx-image-preview.html","<md-dialog aria-label=\"Image preview\" style=\"max-width: inherit;max-height: inherit;\"><md-content class=\"sticky-container\"><md-subheader class=\"md-sticky-no-effect\">{{\'components.mx-image-preview.title\' | mxi18n : \'Image preview\'}}</md-subheader><div class=\"dialog-content\"><img mx-lightbox-src=\"{{Lightbox.imageUrl}}\" alt=\"\"></div></md-content><div class=\"md-actions\" layout=\"row\"><md-button class=\"md-raised md-primary\" ng-click=\"Lightbox.cancel()\">{{\'components.mx-image-preview.close\' | mxi18n : \'Close\'}}</md-button></div></md-dialog>");
 $templateCache.put("mx-journal/mx-journal.html","<div class=\"journal-container\"><div class=\"journal-container--items\"><div ng-repeat=\"item in vm.items\" class=\"journal-item\" layout=\"column\" ng-class=\"{ \'journal-item--my\':item.__my, \'journal-item--first\':item.__first }\"><div><div class=\"journal-item__user\"><div layout=\"row\"><div ng-init=\"userPhoto = item.photo\"><img ng-show=\"userPhoto\" ng-src=\"{{::userPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!userPhoto\" class=\"journal-item__photo-letter journal-item__photo\">{{::item.userName | limitTo:1}}</span></div><div class=\"journal-item__user-name\" flex=\"\">{{::item.userName}}</div></div></div><div class=\"journal-item__date\">{{::item.__created | date:\'medium\'}}</div></div><div class=\"journal-item__content\"><p ng-bind-html=\"item.text\"></p></div></div><div class=\"journal-container--load-more\" ng-show=\"vm.canLoadMore && !vm.processingItems\"><md-button ng-click=\"vm.loadMoreItems()\">{{\'components.journal.load_more_items\' | mxi18n}}</md-button></div><div class=\"journal-container--load-more\" ng-show=\"vm.processingItems\">{{\'components.journal.loading\' | mxi18n}}</div></div><div class=\"journal-item--new journal-item\" ng-if=\"!vm.readOnly\"><div ng-init=\"myPhoto = vm.currentUserPhoto\" class=\"journal-item__photo-wrapper\"><img ng-show=\"myPhoto\" ng-src=\"{{::myPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!myPhoto\" class=\"journal-item__photo-letter journal-item__photo\">Y</span></div><div ng-if=\"vm._showRichEditor\"><mx-rich-text-box class=\"journal-item--new-textarea\" ng-model=\"vm.newComment\" advanced-mode=\"false\" set-focus=\"true\" on-blur=\"vm._handleRichTextBoxBlur()\"></mx-rich-text-box><md-button class=\"journal-item--new__content-button\" ng-click=\"vm.addComment();\" title=\"{{\'components.journal.send_button_label\' | mxi18n}}\" ng-disabled=\"vm.adding || vm.newComment===\'\' && vm.attachments.length === 0\" aria-label=\"{{\'components.journal.send_button_label\' | mxi18n}}\">{{\'components.journal.send_button_label\' | mxi18n}}</md-button><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button></div><div ng-show=\"!vm._showRichEditor\" class=\"journal-item--new-textarea-placeholder\" ng-click=\"vm._showRichEditor = true;\"><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__preview-attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button>{{\'components.journal.write_your_comment\' | mxi18n}}</div><ul class=\"journal-item--new-attachments-list\"><li ng-repeat=\"file in vm.attachments\"><md-icon>insert_drive_file</md-icon>{{::file.DisplayString}}</li></ul></div></div>");
+$templateCache.put("mx-image-preview/mx-image-preview.html","<md-dialog aria-label=\"Image preview\" style=\"max-width: inherit;max-height: inherit;\"><md-content class=\"sticky-container\"><md-subheader class=\"md-sticky-no-effect\">{{\'components.mx-image-preview.title\' | mxi18n : \'Image preview\'}}</md-subheader><div class=\"dialog-content\"><img mx-lightbox-src=\"{{Lightbox.imageUrl}}\" alt=\"\"></div></md-content><div class=\"md-actions\" layout=\"row\"><md-button class=\"md-raised md-primary\" ng-click=\"Lightbox.cancel()\">{{\'components.mx-image-preview.close\' | mxi18n : \'Close\'}}</md-button></div></md-dialog>");
 $templateCache.put("mx-numeric-edit/mx-numeric-edit.html","<md-input-container md-is-error=\"vm.controlNgModel.mxInvalid\"><label>{{vm.label}}</label> <input name=\"{{::vm.name}}\" mx-mask=\"{{::vm.format}}\" ng-model=\"vm.model\" ng-disabled=\"vm._disabled\" ng-readonly=\"vm._readOnly\"><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container>");
 $templateCache.put("mx-picker/mx-autocomplete.html","<md-autocomplete md-items=\"item in vm.autoCompleteSearch()\" md-search-text=\"vm.autoCompleteSearchText\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-item-text=\"vm.getTitle(item)\" md-no-cache=\"true\" md-floating-label=\"{{vm.label}}\" ng-disabled=\"vm._disabled || vm._readOnly\" md-min-length=\"0\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\"><md-item-template><span md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}</span></md-not-found><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-autocomplete>");
-$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\"><md-input-container ng-class=\"{ \'disabled\': vm._disabled, \'readonly\': vm._readOnly }\"><md-chips md-autocomplete-snap=\"\" md-on-add=\"vm.onSelectionChange()\" md-on-remove=\"vm.onSelectionChange()\" md-require-match=\"true\" ng-model=\"vm.selectedItems\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete md-floating-label=\"{{ vm.controlLabel }}\" input-name=\"{{::vm.internalName}}\" md-delay=\"vm.loadDelay\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-item-text=\"vm.getTitle(item)\" md-items=\"item in vm.autoCompleteSearch()\" md-menu-class=\"mx-picker-item-template {{::vm.dropdownHtmlClass}}\" md-min-length=\"0\" md-autoselect=\"true\" md-no-cache=\"true\" md-search-text=\"vm.autoCompleteSearchText\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-select-on-match=\"true\" md-match-case-insensitive=\"true\" spellcheck=\"false\"><md-item-template><span class=\"item-title\"><span md-highlight-flags=\"^i\" md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span> <span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
+$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\"><md-input-container ng-class=\"{ \'disabled\': vm._disabled, \'readonly\': vm._readOnly }\"><md-chips md-autocomplete-snap=\"\" md-on-add=\"vm.onSelectionChange()\" md-on-remove=\"vm.onSelectionChange()\" md-require-match=\"true\" ng-model=\"vm.selectedItems\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete md-floating-label=\"{{ vm.controlLabel }}\" input-name=\"{{::vm.internalName}}\" md-delay=\"vm.loadDelay\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-item-text=\"vm.getTitle(item)\" md-items=\"item in vm.autoCompleteSearch()\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\" md-min-length=\"0\" md-autoselect=\"true\" md-no-cache=\"true\" md-search-text=\"vm.autoCompleteSearchText\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-select-on-match=\"true\" md-match-case-insensitive=\"true\" spellcheck=\"false\"><md-item-template><span class=\"item-title\"><span md-highlight-flags=\"^i\" md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span> <span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
 $templateCache.put("mx-picker/mx-select.html","<md-input-container><label>{{vm.label}}</label><md-select ng-model-options=\"{ trackBy: \'vm.getTrackingValue($value)\' }\" ng-model=\"vm.selectModel\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-readonly=\"vm._readOnly\"><md-option ng-value=\"vm.getId(item)\" ng-repeat=\"item in vm.items\">{{vm.getTitle(item)}}</md-option></md-select><mx-control-errors></mx-control-errors></md-input-container>");
 $templateCache.put("mx-rating/mx-rating.html","<label>{{vm.label}}</label><div class=\"mx-rating\" ng-class=\"[vm._disabled ? \'mx-rating--disabled\' : \'\']\"><md-icon class=\"mx-rating--star\" ng-repeat=\"star in vm.stars\" ng-class=\"{\'mx-rating--star-filled\': star.filled }\" ng-click=\"vm.toggle($index)\">star</md-icon></div>");
 $templateCache.put("mx-repeater/mx-repeater.html","<div class=\"mx-repeater\" flex=\"\"><div flex=\"\" class=\"mx-repeater--row\" ng-repeat=\"item in __$vm.entities\"><div class=\"mx-repeater--panel\" flex=\"\" ng-include=\"\" src=\"__$vm.templateId\" data-onload=\"__$vm.initScope()\"></div></div></div>");
