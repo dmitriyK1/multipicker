@@ -2579,6 +2579,23 @@ button.md-button.md-icon-button.journal-item--new__preview-attach-button {
 	color: $mx_palette_Primary_100;
 }
 
+.mx-multipicker--container:not(.mx-multipicker-focused) {
+	::-webkit-input-placeholder {
+		color: transparent;
+	}
+
+	::-moz-placeholder {
+		color: transparent;
+	}
+
+	:-ms-input-placeholder {
+		color: transparent;
+	}
+
+	:-moz-placeholder {
+		color: transparent;
+	}
+}
 
 .mx-multipicker-focused {
 	label {
@@ -2606,22 +2623,6 @@ button.md-button.md-icon-button.journal-item--new__preview-attach-button {
 }
 
 mx-multi-picker {
-
-	input::-webkit-input-placeholder {
-		color: transparent;
-	}
-
-	::-moz-placeholder {
-		color: transparent;
-	}
-
-	:-ms-input-placeholder {
-		color: transparent;
-	}
-
-	:-moz-placeholder {
-		color: transparent;
-	}
 
 	.mx-multipicker--container .md-chips {
 		padding-bottom: 0;
@@ -2718,7 +2719,7 @@ mx-multi-picker {
 			overflow: visible;
 
 			input {
-				margin-top: -15px;
+				margin-top: -5px;
 				color: #000000;
 			}
         }
@@ -2735,6 +2736,7 @@ mx-multi-picker {
 
 	md-input-container label:not(.md-no-float):not(.md-container-ignore),
 	md-input-container .md-placeholder {
+		left: 13px;
 		pointer-events: none;
 		-webkit-user-select: none;
 		user-select: none;

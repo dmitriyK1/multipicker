@@ -2261,6 +2261,18 @@ button.md-button.md-icon-button.journal-item--new__preview-attach-button {
   font-size: 2em;
   color: #c1c8cb; }
 
+.mx-multipicker--container:not(.mx-multipicker-focused) ::-webkit-input-placeholder {
+  color: transparent; }
+
+.mx-multipicker--container:not(.mx-multipicker-focused) ::-moz-placeholder {
+  color: transparent; }
+
+.mx-multipicker--container:not(.mx-multipicker-focused) :-ms-input-placeholder {
+  color: transparent; }
+
+.mx-multipicker--container:not(.mx-multipicker-focused) :-moz-placeholder {
+  color: transparent; }
+
 .mx-multipicker-focused label {
   -webkit-transform: translate3d(0, 6px, 0) scale(0.75) !important;
   transform: translate3d(0, 6px, 0) scale(0.75) !important; }
@@ -2277,18 +2289,6 @@ button.md-button.md-icon-button.journal-item--new__preview-attach-button {
 .md-autocomplete-suggestions-container.md-default-theme li .highlight,
 .md-autocomplete-suggestions-container li .highlight {
   color: #000000; }
-
-mx-multi-picker input::-webkit-input-placeholder {
-  color: transparent; }
-
-mx-multi-picker ::-moz-placeholder {
-  color: transparent; }
-
-mx-multi-picker :-ms-input-placeholder {
-  color: transparent; }
-
-mx-multi-picker :-moz-placeholder {
-  color: transparent; }
 
 mx-multi-picker .mx-multipicker--container .md-chips {
   padding-bottom: 0; }
@@ -2360,7 +2360,7 @@ mx-multi-picker .mx-multipicker--container .md-chips .md-chip {
 mx-multi-picker .mx-multipicker--container .md-chips .md-chip-input-container {
   overflow: visible; }
   mx-multi-picker .mx-multipicker--container .md-chips .md-chip-input-container input {
-    margin-top: -15px;
+    margin-top: -5px;
     color: #000000; }
 
 mx-multi-picker .mx-multipicker--container .md-chips md-chip + div md-input-container input {
@@ -2371,6 +2371,7 @@ mx-multi-picker md-input-container:not(.md-input-invalid).md-input-focused [disa
 
 mx-multi-picker md-input-container label:not(.md-no-float):not(.md-container-ignore),
 mx-multi-picker md-input-container .md-placeholder {
+  left: 13px;
   pointer-events: none;
   -webkit-user-select: none;
   user-select: none; }
