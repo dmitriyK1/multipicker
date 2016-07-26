@@ -2331,8 +2331,6 @@ mx-multi-picker .mx-multipicker--container .md-chips .md-chip {
   padding-left: 0; }
   mx-multi-picker .mx-multipicker--container .md-chips .md-chip:hover {
     background: none; }
-  mx-multi-picker .mx-multipicker--container .md-chips .md-chip:first-child {
-    padding-left: 12px; }
 
 mx-multi-picker .mx-multipicker--container .md-chips .md-chip-input-container {
   overflow: visible; }
