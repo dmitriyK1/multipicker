@@ -1109,72 +1109,6 @@ mx-date-time-control {
 
 
 
-mx-dropdown {
-	position: relative;
-	z-index: 1;
-	&.mx-dropdown-expanded {
-		z-index: 100;
-	}
-	.mx-dropdown-item {
-		& > button.md-button .mx-dropdown-item-label {
-			color: rgba(0, 0, 0, 0.87);
-		}
-
-		md-icon.mx-dropdown-item-icon {
-			color: rgba(0,0,0,0.54);
-		}
-	}
-
-	md-list-item.mx-dropdown-item .md-list-item-inner {
-		min-height: 45px;
-	}
-}
-
-
-md-list.mx-dropdown-list {
-	font-size: 1.6rem;
-	padding: 1rem 0;
-}
-
-.mx-dropdown-list-wrap {
-	position: absolute;
-	right: 0;
-	background-color: $white;
-	visibility: hidden;
-	&.mx-dropdown-list-wrap-up {
-		bottom: 100%;
-	}
-
-	md-list-item md-icon.mx-dropdown-item-icon:first-child {
-		 margin: 0.7rem 1.6rem 0.7rem 0rem;
-	 }
-
-	.mx-dropdown-item {
-		display: block;
-		padding: 0;
-		min-height: 45px;
-		.md-button {
-			margin: 0 3rem 0 0;
-			padding: 0.5rem 1.5rem 0 1.6rem;
-		}
-		.md-list-item-inner {
-			display: inline-block;
-			.mx-dropdown-item-label {
-				white-space: nowrap;
-				font-size: 1.6rem;
-				margin: 0.1rem 1rem 0.7rem 0;
-			}
-			.mx-dropdown-item-icon {
-				float: left;
-			}
-		}
-
-	}
-
-}
-
-
-
 .feedback__icon {
 	margin-top: 11px;
 	&:hover{
@@ -1445,6 +1379,72 @@ md-slider.feedback__md-rating {
 		}
 
 	}
+}
+
+
+
+mx-dropdown {
+	position: relative;
+	z-index: 1;
+	&.mx-dropdown-expanded {
+		z-index: 100;
+	}
+	.mx-dropdown-item {
+		& > button.md-button .mx-dropdown-item-label {
+			color: rgba(0, 0, 0, 0.87);
+		}
+
+		md-icon.mx-dropdown-item-icon {
+			color: rgba(0,0,0,0.54);
+		}
+	}
+
+	md-list-item.mx-dropdown-item .md-list-item-inner {
+		min-height: 45px;
+	}
+}
+
+
+md-list.mx-dropdown-list {
+	font-size: 1.6rem;
+	padding: 1rem 0;
+}
+
+.mx-dropdown-list-wrap {
+	position: absolute;
+	right: 0;
+	background-color: $white;
+	visibility: hidden;
+	&.mx-dropdown-list-wrap-up {
+		bottom: 100%;
+	}
+
+	md-list-item md-icon.mx-dropdown-item-icon:first-child {
+		 margin: 0.7rem 1.6rem 0.7rem 0rem;
+	 }
+
+	.mx-dropdown-item {
+		display: block;
+		padding: 0;
+		min-height: 45px;
+		.md-button {
+			margin: 0 3rem 0 0;
+			padding: 0.5rem 1.5rem 0 1.6rem;
+		}
+		.md-list-item-inner {
+			display: inline-block;
+			.mx-dropdown-item-label {
+				white-space: nowrap;
+				font-size: 1.6rem;
+				margin: 0.1rem 1rem 0.7rem 0;
+			}
+			.mx-dropdown-item-icon {
+				float: left;
+			}
+		}
+
+	}
+
 }
 
 .file-selector__container {
@@ -2720,6 +2720,7 @@ mx-multi-picker {
 
 			input {
 				margin-top: -5px;
+				margin-left: 5px;
 				color: #000000;
 			}
         }
