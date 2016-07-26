@@ -2596,9 +2596,9 @@ mx-multi-picker {
 	}
 
     .remove {
-    	position: absolute;
+		position: absolute;
 		top: 9px;
-    	right: 7px;
+		right: 7px;
 		cursor: pointer;
 
 		md-icon {
@@ -2704,6 +2704,8 @@ mx-multi-picker {
 	md-input-container .md-placeholder {
 		margin-bottom: 10px;
 		pointer-events: none;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.mx-multipicker--container md-chips .item-title {
@@ -2724,9 +2726,6 @@ mx-multi-picker {
 	}
 
 }
-
-
-
 
 mx-autocomplete {
 	md-input-container {

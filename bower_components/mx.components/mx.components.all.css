@@ -2349,7 +2349,9 @@ mx-multi-picker md-input-container:not(.md-input-invalid).md-input-focused [disa
 mx-multi-picker md-input-container label:not(.md-no-float):not(.md-container-ignore),
 mx-multi-picker md-input-container .md-placeholder {
   margin-bottom: 10px;
-  pointer-events: none; }
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none; }
 
 mx-multi-picker .mx-multipicker--container md-chips .item-title {
   font-weight: normal; }
