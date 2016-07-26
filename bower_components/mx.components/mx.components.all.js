@@ -5461,232 +5461,6 @@ angular.module('mx.components', [
 
 })(window);
 
-(function (w, a) {
-	'use strict';
-
-	function MxRegExpMask() {
-
-		MxRegExpMaskImplementation.prototype = Object.create(mx.components.masks.Base.prototype);
-		a.extend(MxRegExpMaskImplementation.prototype, {
-			createFormatter: function () {
-				return null;
-			},
-			createParser: function () {
-				return null;
-			}
-		});
-
-		function MxRegExpMaskImplementation() {
-			mx.components.masks.Base.call(this);
-		}
-
-		//for cross-references
-		w.mx.components.masks.RegExp = MxRegExpMaskImplementation;
-		return new MxRegExpMaskImplementation(arguments);
-	}
-
-	w.mx = window.mx || {};
-	w.mx.components = mx.components || {};
-	w.mx.components.masks = mx.components.masks || {};
-	w.mx.components.masks.RegExp = MxRegExpMask;
-})(window, angular);
-
-(function (w, a) {
-	'use strict';
-
-	function mxNumericMask() {
-
-		MxNumericMaskImplementation.prototype = Object.create(mx.components.masks.Base.prototype);
-		a.extend(MxNumericMaskImplementation.prototype, {
-			createFormatter: function () {
-				return function (value) {
-					var prefix = value < 0 ? '-' : '';
-					var valueToFormat = prepareNumberToFormatter(value, this.decimals);
-					return prefix + this.viewMask.apply(valueToFormat);
-				};
-			},
-			createParser: function (ngModel) {
-				return function (value) {
-					var valueToFormat = clearDelimitersAndLeadingZeros(value) || '0';
-					var formatedValue = this.viewMask.apply(valueToFormat);
-					var actualNumber = parseFloat(this.modelMask.apply(valueToFormat));
-					var isNegative = value[0] === '-';
-					var needsToInvertSign = value.slice(-1) === '-';
-
-					//only apply the minus sign if it is negative or(exclusive) needs to be negative and the number is different from zero
-					if (needsToInvertSign ? !isNegative : isNegative && !!actualNumber) {
-						actualNumber *= -1;
-						formatedValue = '-' + formatedValue;
-					}
-
-					var validity = true;
-					if (this.mxMaskMin) {
-						var min = parseFloat(this.mxMaskMin);
-						validity = isNaN(min) || actualNumber >= min;
-						if (!validity) {
-							actualNumber = min;
-						}
-					}
-					if (validity && this.mxMaskMax) {
-						var max = parseFloat(this.mxMaskMax);
-						validity = isNaN(max) || actualNumber <= max;
-						if (!validity) {
-							actualNumber = max;
-						}
-					}
-					if (!validity) {
-						var prefix = actualNumber < 0 ? '-' : '';
-						formatedValue = prefix + this.viewMask.apply(actualNumber);
-					}
-
-					if (ngModel.$viewValue !== formatedValue) {
-						ngModel.$setViewValue(formatedValue);
-						ngModel.$render();
-					}
-
-					return actualNumber;
-				};
-			},
-			initialize: function () {
-				var i;
-				var mask = '#' + mx.components.Utils.thousandsDelimiter + '##0';
-
-				if (this.decimals > 0) {
-					mask += mx.components.Utils.decimalSeparator;
-					for (i = 0; i < this.decimals; i++) {
-						mask += '0';
-					}
-				}
-				this.viewMask = this.createMask(mask, {reverse: true});
-
-				mask = '###0';
-
-				if (this.decimals > 0) {
-					mask += '.';
-					for (i = 0; i < this.decimals; i++) {
-						mask += '0';
-					}
-				}
-				this.modelMask = this.createMask(mask, {reverse: true});
-			}
-		});
-
-		function MxNumericMaskImplementation(decimals) {
-			mx.components.masks.Base.call(this);
-			this.decimals = decimals || 0;
-			this.parseAttributes = ['mxMaskMin', 'mxMaskMax'];
-		}
-
-		function clearDelimitersAndLeadingZeros(value) {
-			var cleanValue = value.replace(/^-/, '').replace(/^0*/, '');
-			cleanValue = cleanValue.replace(/[^0-9]/g, '');
-			return cleanValue;
-		}
-
-		function prepareNumberToFormatter(value, decimals) {
-			return clearDelimitersAndLeadingZeros((parseFloat(value)).toFixed(decimals));
-		}
-
-		//for cross-references
-		w.mx.components.masks.Numeric = MxNumericMaskImplementation;
-		return new MxNumericMaskImplementation(arguments);
-	}
-
-	w.mx = window.mx || {};
-	w.mx.components = mx.components || {};
-	w.mx.components.masks = mx.components.masks || {};
-	w.mx.components.masks.Numeric = mxNumericMask;
-})(window, angular);
-
-(function () {
-	'use strict';
-
-	angular.module('mx.components').directive('mxMask', ['$parse', 'mx.internationalization', function ($parse, internationalization) {
-
-		return {
-			restrict: 'A',
-			require: ['?ngModel'],
-			link: function (scope, element, attrs, ngModel) {
-				if (!ngModel[0]) {
-					throw new Error(internationalization.get('components.errors.mx_mask_without_ng_model'));
-				}
-				var modelCtrl = ngModel[0];
-				var maskType = attrs.mxMask;
-				var mask = null;
-				switch (maskType) {
-					case 'integer':
-						mask = new mx.components.masks.Numeric();
-						break;
-					case 'float':
-						mask = new mx.components.masks.Numeric(2);
-						break;
-					default:
-						mask = new mx.components.masks.RegExp();
-						break;
-				}
-				mask.link(scope, attrs, modelCtrl, $parse);
-			}
-		};
-	}]);
-})();
-
-(function (w) {
-	'use strict';
-
-	function MxBaseMask() {
-		this.parseAttributes = [];
-	}
-
-	MxBaseMask.prototype = {
-		link: function (scope, attrs, ngModel, $parse) {
-			var that = this;
-			var formatter = that.createFormatter(ngModel);
-			var parser = that.createParser(ngModel);
-			if (formatter) {
-				ngModel.$formatters.push(function (value) {
-					if (ngModel.$isEmpty(value)) {
-						return value;
-					}
-					return formatter.call(that, value);
-				});
-			}
-			if (parser) {
-				ngModel.$parsers.push(function (value) {
-					if (ngModel.$isEmpty(value)) {
-						return value;
-					}
-					return parser.call(that, value);
-				});
-			}
-
-			this.parseAttributes.forEach(function (item) {
-				if (attrs[item]) {
-					that[item] = $parse(attrs[item])(scope);
-				}
-			});
-
-			this.initialize();
-		},
-		createParser: function () {
-			throw new Error('Mask. createParser method is not implemented');
-		},
-		createFormatter: function () {
-			throw new Error('Mask. createFormatter method is not implemented');
-		},
-		initialize: function () {
-
-		},
-		createMask: function (pattern, options) {
-			return new mx.components.Mask(pattern, options);
-		}
-	};
-
-	w.mx = window.mx || {};
-	w.mx.components = mx.components || {};
-	w.mx.components.masks = mx.components.masks || {};
-	w.mx.components.masks.Base = MxBaseMask;
-})(window);
-
 (function () {
 	'use strict';
 
@@ -6017,6 +5791,232 @@ angular.module('mx.components', [
 		});
 
 })();
+
+(function (w, a) {
+	'use strict';
+
+	function MxRegExpMask() {
+
+		MxRegExpMaskImplementation.prototype = Object.create(mx.components.masks.Base.prototype);
+		a.extend(MxRegExpMaskImplementation.prototype, {
+			createFormatter: function () {
+				return null;
+			},
+			createParser: function () {
+				return null;
+			}
+		});
+
+		function MxRegExpMaskImplementation() {
+			mx.components.masks.Base.call(this);
+		}
+
+		//for cross-references
+		w.mx.components.masks.RegExp = MxRegExpMaskImplementation;
+		return new MxRegExpMaskImplementation(arguments);
+	}
+
+	w.mx = window.mx || {};
+	w.mx.components = mx.components || {};
+	w.mx.components.masks = mx.components.masks || {};
+	w.mx.components.masks.RegExp = MxRegExpMask;
+})(window, angular);
+
+(function (w, a) {
+	'use strict';
+
+	function mxNumericMask() {
+
+		MxNumericMaskImplementation.prototype = Object.create(mx.components.masks.Base.prototype);
+		a.extend(MxNumericMaskImplementation.prototype, {
+			createFormatter: function () {
+				return function (value) {
+					var prefix = value < 0 ? '-' : '';
+					var valueToFormat = prepareNumberToFormatter(value, this.decimals);
+					return prefix + this.viewMask.apply(valueToFormat);
+				};
+			},
+			createParser: function (ngModel) {
+				return function (value) {
+					var valueToFormat = clearDelimitersAndLeadingZeros(value) || '0';
+					var formatedValue = this.viewMask.apply(valueToFormat);
+					var actualNumber = parseFloat(this.modelMask.apply(valueToFormat));
+					var isNegative = value[0] === '-';
+					var needsToInvertSign = value.slice(-1) === '-';
+
+					//only apply the minus sign if it is negative or(exclusive) needs to be negative and the number is different from zero
+					if (needsToInvertSign ? !isNegative : isNegative && !!actualNumber) {
+						actualNumber *= -1;
+						formatedValue = '-' + formatedValue;
+					}
+
+					var validity = true;
+					if (this.mxMaskMin) {
+						var min = parseFloat(this.mxMaskMin);
+						validity = isNaN(min) || actualNumber >= min;
+						if (!validity) {
+							actualNumber = min;
+						}
+					}
+					if (validity && this.mxMaskMax) {
+						var max = parseFloat(this.mxMaskMax);
+						validity = isNaN(max) || actualNumber <= max;
+						if (!validity) {
+							actualNumber = max;
+						}
+					}
+					if (!validity) {
+						var prefix = actualNumber < 0 ? '-' : '';
+						formatedValue = prefix + this.viewMask.apply(actualNumber);
+					}
+
+					if (ngModel.$viewValue !== formatedValue) {
+						ngModel.$setViewValue(formatedValue);
+						ngModel.$render();
+					}
+
+					return actualNumber;
+				};
+			},
+			initialize: function () {
+				var i;
+				var mask = '#' + mx.components.Utils.thousandsDelimiter + '##0';
+
+				if (this.decimals > 0) {
+					mask += mx.components.Utils.decimalSeparator;
+					for (i = 0; i < this.decimals; i++) {
+						mask += '0';
+					}
+				}
+				this.viewMask = this.createMask(mask, {reverse: true});
+
+				mask = '###0';
+
+				if (this.decimals > 0) {
+					mask += '.';
+					for (i = 0; i < this.decimals; i++) {
+						mask += '0';
+					}
+				}
+				this.modelMask = this.createMask(mask, {reverse: true});
+			}
+		});
+
+		function MxNumericMaskImplementation(decimals) {
+			mx.components.masks.Base.call(this);
+			this.decimals = decimals || 0;
+			this.parseAttributes = ['mxMaskMin', 'mxMaskMax'];
+		}
+
+		function clearDelimitersAndLeadingZeros(value) {
+			var cleanValue = value.replace(/^-/, '').replace(/^0*/, '');
+			cleanValue = cleanValue.replace(/[^0-9]/g, '');
+			return cleanValue;
+		}
+
+		function prepareNumberToFormatter(value, decimals) {
+			return clearDelimitersAndLeadingZeros((parseFloat(value)).toFixed(decimals));
+		}
+
+		//for cross-references
+		w.mx.components.masks.Numeric = MxNumericMaskImplementation;
+		return new MxNumericMaskImplementation(arguments);
+	}
+
+	w.mx = window.mx || {};
+	w.mx.components = mx.components || {};
+	w.mx.components.masks = mx.components.masks || {};
+	w.mx.components.masks.Numeric = mxNumericMask;
+})(window, angular);
+
+(function () {
+	'use strict';
+
+	angular.module('mx.components').directive('mxMask', ['$parse', 'mx.internationalization', function ($parse, internationalization) {
+
+		return {
+			restrict: 'A',
+			require: ['?ngModel'],
+			link: function (scope, element, attrs, ngModel) {
+				if (!ngModel[0]) {
+					throw new Error(internationalization.get('components.errors.mx_mask_without_ng_model'));
+				}
+				var modelCtrl = ngModel[0];
+				var maskType = attrs.mxMask;
+				var mask = null;
+				switch (maskType) {
+					case 'integer':
+						mask = new mx.components.masks.Numeric();
+						break;
+					case 'float':
+						mask = new mx.components.masks.Numeric(2);
+						break;
+					default:
+						mask = new mx.components.masks.RegExp();
+						break;
+				}
+				mask.link(scope, attrs, modelCtrl, $parse);
+			}
+		};
+	}]);
+})();
+
+(function (w) {
+	'use strict';
+
+	function MxBaseMask() {
+		this.parseAttributes = [];
+	}
+
+	MxBaseMask.prototype = {
+		link: function (scope, attrs, ngModel, $parse) {
+			var that = this;
+			var formatter = that.createFormatter(ngModel);
+			var parser = that.createParser(ngModel);
+			if (formatter) {
+				ngModel.$formatters.push(function (value) {
+					if (ngModel.$isEmpty(value)) {
+						return value;
+					}
+					return formatter.call(that, value);
+				});
+			}
+			if (parser) {
+				ngModel.$parsers.push(function (value) {
+					if (ngModel.$isEmpty(value)) {
+						return value;
+					}
+					return parser.call(that, value);
+				});
+			}
+
+			this.parseAttributes.forEach(function (item) {
+				if (attrs[item]) {
+					that[item] = $parse(attrs[item])(scope);
+				}
+			});
+
+			this.initialize();
+		},
+		createParser: function () {
+			throw new Error('Mask. createParser method is not implemented');
+		},
+		createFormatter: function () {
+			throw new Error('Mask. createFormatter method is not implemented');
+		},
+		initialize: function () {
+
+		},
+		createMask: function (pattern, options) {
+			return new mx.components.Mask(pattern, options);
+		}
+	};
+
+	w.mx = window.mx || {};
+	w.mx.components = mx.components || {};
+	w.mx.components.masks = mx.components.masks || {};
+	w.mx.components.masks.Base = MxBaseMask;
+})(window);
 
 (function (w) {
 	'use strict';
@@ -6875,19 +6875,6 @@ angular.module('mx.components', [
 				}
 			};
 		}]);
-})();
-
-(function () {
-	'use strict';
-
-	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
-		function mxi18nFilter(string, defaultText) {
-			return internationalization.get(string, defaultText);
-		}
-
-		return mxi18nFilter;
-	}]);
-
 })();
 
 (function (){
@@ -7917,6 +7904,19 @@ angular.module('mx.components', [
 			templateUrl: 'mx-grid/mx-grid-edit-form-field.html'
 		};
 	});
+
+})();
+
+(function () {
+	'use strict';
+
+	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
+		function mxi18nFilter(string, defaultText) {
+			return internationalization.get(string, defaultText);
+		}
+
+		return mxi18nFilter;
+	}]);
 
 })();
 
@@ -8981,113 +8981,6 @@ angular.module('mx.components', [
 		}]);
 })();
 
-(function () {
-	'use strict';
-
-	var standardPageSizes = [10, 20, 50, 100];
-	angular.module('mx.components')
-		.directive('mxWorkspaceCommonPagingPanel', function () {
-			MxWorkspaceCommonPagingPanelCtrl.$inject = ['$scope','mx.internationalization'];
-
-			function MxWorkspaceCommonPagingPanelCtrl($scope, internationalization) {
-				var vm = this;
-				$scope.$watch('vm.preprocessor', function () {
-					calculate();
-				}, true);
-
-				vm.prev = prev;
-				vm.next = next;
-				vm.pageSizes = standardPageSizes;
-				vm.pagingLabel = '';
-				vm.isNotNextPage = true;
-				vm.isNotPrevPage = true;
-				vm.isDisabled = false;
-
-				Object.defineProperty(vm, 'pageSize', {
-					get: function () {
-						return vm.preprocessor.pageSize;
-					},
-					set: function(val) {
-						if (val && vm.preprocessor.pageSize !== val) {
-							vm.preprocessor.page = 0;
-							vm.preprocessor.pageSize = val;
-							vm.preprocessor.callChanged();
-						}
-					}
-				});
-
-
-				return vm;
-
-				function prev() {
-					if (vm.preprocessor.page > 0) {
-						vm.preprocessor.page--;
-						vm.preprocessor.callChanged();
-					}
-				}
-
-				function next() {
-					vm.preprocessor.page++;
-					vm.preprocessor.callChanged();
-				}
-
-				function calculate() {
-					var cnt = vm.preprocessor.count;
-					var pageSize = vm.pageSize;
-					if (vm.preprocessor.pageSizes) {
-						vm.pageSizes = vm.preprocessor.pageSizes;
-					}
-
-					var pageNumber = vm.preprocessor.page;
-					vm.isDisabled = vm.preprocessor.disable || false;
-
-					if (vm.pageSizes.indexOf(pageSize) < 0) {
-						var res = [];
-						var prev = 0;
-						vm.pageSizes.forEach(function (item) {
-							if (pageSize < item && (!prev || prev < pageSize)) {
-								res.push(pageSize);
-							}
-							res.push(item);
-							prev = item;
-						});
-						vm.pageSizes = res;
-					}
-
-					vm.isNotPrevPage = pageNumber  === 0 || vm.isDisabled;
-
-					if (cnt > 0) {
-						var start = pageNumber * pageSize + 1;
-						var end = start + pageSize - 1;
-						if (end > cnt) {
-							end = cnt;
-						}
-
-						vm.pagingLabel = start + ' - ' + end + ' ' + internationalization.get('components.mx-datasource-paging-panel.of', 'of') + ' ' + cnt;
-						vm.isNotNextPage = end ===  cnt  || vm.isDisabled || vm.preprocessor.disableNext === true;
-
-					} else {
-						vm.pagingLabel = '';
-						vm.isNotNextPage = true;
-					}
-
-				}
-			}
-
-			return {
-				restrict: 'E',
-				scope: {},
-				bindToController: {
-					preprocessor: '='
-				},
-				controller: MxWorkspaceCommonPagingPanelCtrl,
-				controllerAs: 'vm',
-				templateUrl: 'mx-datasource-paging-panel/mx-datasource-paging-panel.html'
-			};
-		});
-})();
-
-
 (function (w) {
 	'use strict';
 
@@ -9533,6 +9426,113 @@ angular.module('mx.components', [
 			});
 		return directive;
 	});
+})();
+
+
+(function () {
+	'use strict';
+
+	var standardPageSizes = [10, 20, 50, 100];
+	angular.module('mx.components')
+		.directive('mxWorkspaceCommonPagingPanel', function () {
+			MxWorkspaceCommonPagingPanelCtrl.$inject = ['$scope','mx.internationalization'];
+
+			function MxWorkspaceCommonPagingPanelCtrl($scope, internationalization) {
+				var vm = this;
+				$scope.$watch('vm.preprocessor', function () {
+					calculate();
+				}, true);
+
+				vm.prev = prev;
+				vm.next = next;
+				vm.pageSizes = standardPageSizes;
+				vm.pagingLabel = '';
+				vm.isNotNextPage = true;
+				vm.isNotPrevPage = true;
+				vm.isDisabled = false;
+
+				Object.defineProperty(vm, 'pageSize', {
+					get: function () {
+						return vm.preprocessor.pageSize;
+					},
+					set: function(val) {
+						if (val && vm.preprocessor.pageSize !== val) {
+							vm.preprocessor.page = 0;
+							vm.preprocessor.pageSize = val;
+							vm.preprocessor.callChanged();
+						}
+					}
+				});
+
+
+				return vm;
+
+				function prev() {
+					if (vm.preprocessor.page > 0) {
+						vm.preprocessor.page--;
+						vm.preprocessor.callChanged();
+					}
+				}
+
+				function next() {
+					vm.preprocessor.page++;
+					vm.preprocessor.callChanged();
+				}
+
+				function calculate() {
+					var cnt = vm.preprocessor.count;
+					var pageSize = vm.pageSize;
+					if (vm.preprocessor.pageSizes) {
+						vm.pageSizes = vm.preprocessor.pageSizes;
+					}
+
+					var pageNumber = vm.preprocessor.page;
+					vm.isDisabled = vm.preprocessor.disable || false;
+
+					if (vm.pageSizes.indexOf(pageSize) < 0) {
+						var res = [];
+						var prev = 0;
+						vm.pageSizes.forEach(function (item) {
+							if (pageSize < item && (!prev || prev < pageSize)) {
+								res.push(pageSize);
+							}
+							res.push(item);
+							prev = item;
+						});
+						vm.pageSizes = res;
+					}
+
+					vm.isNotPrevPage = pageNumber  === 0 || vm.isDisabled;
+
+					if (cnt > 0) {
+						var start = pageNumber * pageSize + 1;
+						var end = start + pageSize - 1;
+						if (end > cnt) {
+							end = cnt;
+						}
+
+						vm.pagingLabel = start + ' - ' + end + ' ' + internationalization.get('components.mx-datasource-paging-panel.of', 'of') + ' ' + cnt;
+						vm.isNotNextPage = end ===  cnt  || vm.isDisabled || vm.preprocessor.disableNext === true;
+
+					} else {
+						vm.pagingLabel = '';
+						vm.isNotNextPage = true;
+					}
+
+				}
+			}
+
+			return {
+				restrict: 'E',
+				scope: {},
+				bindToController: {
+					preprocessor: '='
+				},
+				controller: MxWorkspaceCommonPagingPanelCtrl,
+				controllerAs: 'vm',
+				templateUrl: 'mx-datasource-paging-panel/mx-datasource-paging-panel.html'
+			};
+		});
 })();
 
 
@@ -14548,8 +14548,8 @@ $templateCache.put("mx-dropdown/mx-dropdown.html","<md-button ng-if=\"vm.hideBut
 $templateCache.put("mx-feedback/mx-feedback-tag.html","<svg version=\"1.1\" id=\"feedbackIcon\" class=\"feedbackIcon\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"0px\" y=\"0px\" width=\"30px\" height=\"30px\" viewbox=\"0 0 30 30\" enable-background=\"new 0 0 30 30\" xml:space=\"preserve\"><g><path class=\"svg-m42-orange\" d=\"M26,13.9c0.2-0.2,0.5-0.2,0.7,0l0.3,0.3V0.5C27,0.2,26.8,0,26.5,0h-26C0.2,0,0,0.2,0,0.5v18 C0,18.8,0.2,19,0.5,19H5v4c0,0.2,0.1,0.4,0.3,0.4c0.1,0,0.1,0.1,0.2,0.1c0.1,0,0.2,0,0.3-0.1l5.9-4.4h9.2L26,13.9z\"></path><path class=\"svg-m42-orange\" d=\"M29.9,18.4L27,15.6v0l-0.7-0.7l-2.5,2.5l3.9,3.9l2.2-2.2c0.1-0.1,0.1-0.2,0.1-0.4S29.9,18.5,29.9,18.4z\"></path><path class=\"svg-m42-orange\" d=\"M15.1,29.4c-0.1,0.2,0,0.4,0.1,0.5c0.1,0.1,0.2,0.1,0.4,0.1c0,0,0.1,0,0.1,0l4.1-1.2l-3.6-3.6L15.1,29.4z\"></path><polygon class=\"svg-m42-orange\" points=\"22.3,19 22.3,19 16.9,24.4 20.7,28.2 27,22 23.1,18.2\"></polygon></g><rect x=\"6\" y=\"8\" class=\"svg-m42-petrol\" width=\"3\" height=\"3\"></rect><rect x=\"12\" y=\"8\" class=\"svg-m42-petrol\" width=\"3\" height=\"3\"></rect><rect x=\"18\" y=\"8\" class=\"svg-m42-petrol\" width=\"3\" height=\"3\"></rect></svg>");
 $templateCache.put("mx-feedback/mx-feedback.html","<div class=\"panel-btn feedback-btn\" ng-attr-tooltip=\"{{::vm.internationalization.iconAlt}}\" tooltip-append-to-body=\"true\" tooltip-placement=\"bottom\" tooltip-html=\"true\" ng-click=\"vm.toggleDialog(); $event.stopPropagation();\"><span class=\"feedback-menu__title\"><md-icon class=\"feedback__icon\" md-svg-src=\"mx-feedback/mx-feedback-tag.html\"></md-icon></span></div><md-whiteframe ng-if=\"vm.dialogActive\" class=\"feedback__dialog md-whiteframe-z5\" layout=\"\" layout-align=\"center center\" data-html2canvas-ignore=\"\" ng-style=\"{\'top\': vm.topOffset}\"><div class=\"dialog__tag-back\"></div><div class=\"dialog__tag-front\"></div><div class=\"dialog__content\"><div class=\"dialog-header\"><h2>{{::vm.internationalization.dialogTitle}}</h2><div class=\"description\">{{::vm.internationalization.titleDescription}} <a target=\"_blank\" ng-href=\"{{::vm.internationalization.policyLink}}\">{{::vm.internationalization.policy}}</a> {{::vm.internationalization.titleDescription2}}</div><small class=\"dialog-header__hint\">{{::vm.internationalization.hintNoTicketCreated}}</small></div><div class=\"dialog-container\"><label class=\"rating-title\">{{::vm.internationalization.rating}}</label><md-slider id=\"feedback-rating-slider\" flex=\"\" class=\"feedback__md-rating\" md-discrete=\"\" ng-model=\"vm.feedback.Rating\" step=\"1\" min=\"1\" max=\"5\" aria-label=\"rating\"></md-slider><div class=\"feedback__md-rating__left\">{{::vm.internationalization.awful }}</div><div class=\"feedback__md-rating__right\">{{::vm.internationalization.excellent }}</div><md-input-container flex=\"\" md-is-error=\"vm.errors.feedbackError\" class=\"feedback__description\"><label class=\"feedback__description--placeholder\">{{::vm.internationalization.comment }}</label> <textarea ng-model=\"vm.feedback.Description\" rows=\"5\"></textarea><div ng-messages=\"vm.errors\"><div ng-message=\"feedbackError\">{{vm.validationError}}</div></div></md-input-container><div class=\"feedback__attachment hide-xs hide-sm\"><div class=\"feedback__attachment-switcher\"><md-checkbox ng-model=\"vm.feedback.AttachScreen\" class=\"material-checkbox\" aria-label=\"{{::vm.internationalization.screen }}\">{{ ::vm.internationalization.screen }}</md-checkbox></div><div class=\"feedback__attachment-preview\" ng-show=\"vm.showPreview\"><img mx-image-preview=\"\"></div></div><div class=\"dialog__footer\" layout=\"row\" layout-align=\"end center\"><md-button class=\"md-raised md-primary mx-close-button\" ng-click=\"vm.toggleDialog()\">{{::vm.internationalization.close }}</md-button><md-button class=\"md-raised md-primary\" ng-click=\"vm.sendFeedback(vm.feedback)\" ng-disabled=\"vm.sendFeedbackSendBtnDisabled\">{{::vm.internationalization.button}}</md-button></div></div></div></md-whiteframe>");
 $templateCache.put("mx-file-uploader/mx-file-uploader.html","<div class=\"file-selector__container\"><ul><li ng-repeat=\"file in vm.files\"><p>&nbsp;{{file.name}}</p><p class=\"file-selector__remove-btn\" ng-click=\"vm.removeFile(file)\">X</p></li></ul><md-button class=\"md-fab md-mini\" aria-label=\"Attach a file\" ngf-select=\"\" ngf-change=\"vm.filesSelected($files, $event)\" ngf-multiple=\"true\"><md-tooltip>{{\'components.mx-file-uploader.attachFileHint\' | mxi18n}}</md-tooltip><md-icon md-svg-src=\"mxComponents:attachment\"></md-icon></md-button></div>");
-$templateCache.put("mx-form/mx-form.html","<ng-form name=\"{{::vm.name}}\" ng-transclude=\"\"></ng-form>");
 $templateCache.put("mx-form-errors/mx-form-errors.html","<div layout=\"row\" ng-class=\"{ \'noerrors\': !vm.errorMessage, \'mx-form-errors--info\': vm.errorMessage.type === \'info\', \'mx-form-errors--warning\': vm.errorMessage.type === \'warning\' }\" class=\"mx-form-errors\"><div layout=\"column\"><i class=\"material-icons\" style=\"color: white;\">{{vm.errorMessage.type}}</i></div><div layout=\"row\" flex=\"\" class=\"errorMessage\" ng-bind-html=\"vm.errorMessage.message\"></div><div layout=\"column\"><div><i class=\"material-icons iconButton\" ng-show=\"vm.prevExists\" ng-click=\"vm.prevError()\" title=\"Previous\">keyboard_arrow_left</i> <i class=\"material-icons iconButton\" ng-show=\"vm.nextExists\" ng-click=\"vm.nextError()\" title=\"Next\">keyboard_arrow_right</i></div></div></div>");
+$templateCache.put("mx-form/mx-form.html","<ng-form name=\"{{::vm.name}}\" ng-transclude=\"\"></ng-form>");
 $templateCache.put("mx-grid/mx-grid-edit-form-field.html","<mx-text-box ng-if=\"vm.isString()\" data-value=\"vm.entity[vm.field.name]\" aria-label=\"{{vm.field.title}}\" data-label=\"{{vm.field.title}}\"></mx-text-box><md-checkbox ng-if=\"vm.isBool()\" ng-model=\"vm.entity[vm.field.name]\" aria-disabled=\"true\"><label>{{vm.field.title}}</label></md-checkbox><mx-picker ng-if=\"vm.isReference()\" item-title-field=\"\'DisplayValue\'\" item-id-field=\"\'Value\'\" items-provider=\"EntityGetDialogTransform\" value=\"vm.entity[vm.field.name]\" items-provider-parameters=\'{entity:\"SPSContentPickupGridAlign\"}\' label=\"{{vm.field.title}}\" view=\"select\"></mx-picker>");
 $templateCache.put("mx-grid/mx-grid-edit-form.html","<div flex=\"100\" class=\"mx-grid-edit-form\"><div class=\"md-whiteframe-7dp mx-grid-edit-form-inner\"><div layout=\"row\" ng-repeat=\"row in vm.formFields\" ng-if=\"vm.formFields\"><div flex=\"{{100/(row.fields.length)}}\" ng-repeat=\"field in row.fields\"><mx-grid-edit-form-field field=\"field\" entity=\"vm.localScope.entity\"></mx-grid-edit-form-field></div></div><div class=\"mx-grid-edit-form-inner---content\" ng-show=\"!vm.formFields\"></div><div layout=\"row\"><div flex=\"\"></div><mx-button aria-label=\"cancel\" ng-click=\"vm.cancel()\" data-label=\"Cancel\"></mx-button><mx-button aria-label=\"save\" ng-click=\"vm.save()\" data-label=\"Save\"></mx-button></div></div></div>");
 $templateCache.put("mx-grid/mx-grid-gridmenu-item.html","<button type=\"button\" class=\"ui-grid-menu-item\" ng-click=\"itemAction($event,title)\" ng-show=\"itemShown()\" ng-class=\"{ \'ui-grid-menu-item-active\': active(), \'ui-grid-sr-only\': (!focus && screenReaderOnly) }\" aria-pressed=\"{{active()}}\" tabindex=\"\" ng-focus=\"focus=true\" ng-blur=\"focus=false\"><md-checkbox class=\"mx-grid-gridmenu-checkbox\" ng-show=\"(context.gridCol !== undefined)\" ng-checked=\"(icon === \'ui-grid-icon-ok\' )\" aria-label=\"Check\"></md-checkbox>{{ name }}</button>");
@@ -14563,7 +14563,7 @@ $templateCache.put("mx-image-preview/mx-image-preview.html","<md-dialog aria-lab
 $templateCache.put("mx-journal/mx-journal.html","<div class=\"journal-container\"><div class=\"journal-container--items\"><div ng-repeat=\"item in vm.items\" class=\"journal-item\" layout=\"column\" ng-class=\"{ \'journal-item--my\':item.__my, \'journal-item--first\':item.__first }\"><div><div class=\"journal-item__user\"><div layout=\"row\"><div ng-init=\"userPhoto = item.photo\"><img ng-show=\"userPhoto\" ng-src=\"{{::userPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!userPhoto\" class=\"journal-item__photo-letter journal-item__photo\">{{::item.userName | limitTo:1}}</span></div><div class=\"journal-item__user-name\" flex=\"\">{{::item.userName}}</div></div></div><div class=\"journal-item__date\">{{::item.__created | date:\'medium\'}}</div></div><div class=\"journal-item__content\"><p ng-bind-html=\"item.text\"></p></div></div><div class=\"journal-container--load-more\" ng-show=\"vm.canLoadMore && !vm.processingItems\"><md-button ng-click=\"vm.loadMoreItems()\">{{\'components.journal.load_more_items\' | mxi18n}}</md-button></div><div class=\"journal-container--load-more\" ng-show=\"vm.processingItems\">{{\'components.journal.loading\' | mxi18n}}</div></div><div class=\"journal-item--new journal-item\" ng-if=\"!vm.readOnly\"><div ng-init=\"myPhoto = vm.currentUserPhoto\" class=\"journal-item__photo-wrapper\"><img ng-show=\"myPhoto\" ng-src=\"{{::myPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!myPhoto\" class=\"journal-item__photo-letter journal-item__photo\">Y</span></div><div ng-if=\"vm._showRichEditor\"><mx-rich-text-box class=\"journal-item--new-textarea\" ng-model=\"vm.newComment\" advanced-mode=\"false\" set-focus=\"true\" on-blur=\"vm._handleRichTextBoxBlur()\"></mx-rich-text-box><md-button class=\"journal-item--new__content-button\" ng-click=\"vm.addComment();\" title=\"{{\'components.journal.send_button_label\' | mxi18n}}\" ng-disabled=\"vm.adding || vm.newComment===\'\' && vm.attachments.length === 0\" aria-label=\"{{\'components.journal.send_button_label\' | mxi18n}}\">{{\'components.journal.send_button_label\' | mxi18n}}</md-button><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button></div><div ng-show=\"!vm._showRichEditor\" class=\"journal-item--new-textarea-placeholder\" ng-click=\"vm._showRichEditor = true;\"><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__preview-attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button>{{\'components.journal.write_your_comment\' | mxi18n}}</div><ul class=\"journal-item--new-attachments-list\"><li ng-repeat=\"file in vm.attachments\"><md-icon>insert_drive_file</md-icon>{{::file.DisplayString}}</li></ul></div></div>");
 $templateCache.put("mx-numeric-edit/mx-numeric-edit.html","<md-input-container md-is-error=\"vm.controlNgModel.mxInvalid\"><label>{{vm.label}}</label> <input name=\"{{::vm.name}}\" mx-mask=\"{{::vm.format}}\" ng-model=\"vm.model\" ng-disabled=\"vm._disabled\" ng-readonly=\"vm._readOnly\"><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container>");
 $templateCache.put("mx-picker/mx-autocomplete.html","<md-autocomplete md-items=\"item in vm.autoCompleteSearch()\" md-search-text=\"vm.autoCompleteSearchText\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-item-text=\"vm.getTitle(item)\" md-no-cache=\"true\" md-floating-label=\"{{vm.label}}\" ng-disabled=\"vm._disabled || vm._readOnly\" md-min-length=\"0\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\"><md-item-template><span md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}</span></md-not-found><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-autocomplete>");
-$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\" ng-class=\"{ \'mx-multipicker-focused\': vm.selectedItems.length > 0 }\"><md-input-container ng-class=\"{ \'disabled\': vm._disabled, \'readonly\': vm._readOnly }\"><md-chips md-autocomplete-snap=\"\" md-on-add=\"vm.onSelectionChange(\'add\')\" md-on-remove=\"vm.onSelectionChange(\'remove\')\" md-require-match=\"true\" ng-model=\"vm.selectedItems\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete md-floating-label=\"{{ vm.controlLabel }}\" input-name=\"{{::vm.internalName}}\" md-delay=\"vm.loadDelay\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-item-text=\"vm.getTitle(item)\" md-items=\"item in vm.autoCompleteSearch()\" md-menu-class=\"mx-multipicker--dropdown {{::vm.dropdownHtmlClass}}\" md-min-length=\"0\" md-autoselect=\"true\" md-no-cache=\"true\" md-search-text=\"vm.autoCompleteSearchText\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-select-on-match=\"true\" md-match-case-insensitive=\"true\" spellcheck=\"false\"><md-item-template><span class=\"item-hint\">Hint{{ item.hint }}</span> <span class=\"item-title\"><span md-highlight-flags=\"^i\" md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span> <span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template><div class=\"remove\" md-chip-remove=\"\"><md-icon md-svg-icon=\"md-close\"></md-icon></div></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
+$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\" ng-class=\"{ \'mx-multipicker-focused\': vm.selectedItems.length > 0 }\"><md-input-container ng-class=\"{ \'disabled\': vm._disabled, \'readonly\': vm._readOnly }\"><md-chips md-autocomplete-snap=\"\" md-on-add=\"vm.onSelectionChange(\'add\')\" md-on-remove=\"vm.onSelectionChange(\'remove\')\" md-require-match=\"true\" ng-model=\"vm.selectedItems\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete input-name=\"{{::vm.internalName}}\" md-delay=\"vm.loadDelay\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-item-text=\"vm.getTitle(item)\" md-items=\"item in vm.autoCompleteSearch()\" md-menu-class=\"mx-multipicker--dropdown {{::vm.dropdownHtmlClass}}\" md-min-length=\"0\" md-autoselect=\"true\" md-no-cache=\"true\" md-search-text=\"vm.autoCompleteSearchText\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-select-on-match=\"true\" md-match-case-insensitive=\"true\" spellcheck=\"false\" placeholder=\"{{vm.autoPlaceholder}}\"><md-item-template><span class=\"item-hint\">Hint{{ item.hint }}</span> <span class=\"item-title\"><span md-highlight-flags=\"^i\" md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span> <span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template><div class=\"remove\" md-chip-remove=\"\"><md-icon md-svg-icon=\"md-close\"></md-icon></div></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
 $templateCache.put("mx-picker/mx-select.html","<md-input-container><label>{{vm.label}}</label><md-select ng-model-options=\"{ trackBy: \'vm.getTrackingValue($value)\' }\" ng-model=\"vm.selectModel\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-readonly=\"vm._readOnly\"><md-option ng-value=\"vm.getId(item)\" ng-repeat=\"item in vm.items\">{{vm.getTitle(item)}}</md-option></md-select><mx-control-errors></mx-control-errors></md-input-container>");
 $templateCache.put("mx-rating/mx-rating.html","<label>{{vm.label}}</label><div class=\"mx-rating\" ng-class=\"[vm._disabled ? \'mx-rating--disabled\' : \'\']\"><md-icon class=\"mx-rating--star\" ng-repeat=\"star in vm.stars\" ng-class=\"{\'mx-rating--star-filled\': star.filled }\" ng-click=\"vm.toggle($index)\">star</md-icon></div>");
 $templateCache.put("mx-repeater/mx-repeater.html","<div class=\"mx-repeater\" flex=\"\"><div flex=\"\" class=\"mx-repeater--row\" ng-repeat=\"item in __$vm.entities\"><div class=\"mx-repeater--panel\" flex=\"\" ng-include=\"\" src=\"__$vm.templateId\" data-onload=\"__$vm.initScope()\"></div></div></div>");
