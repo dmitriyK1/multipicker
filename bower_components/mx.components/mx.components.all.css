@@ -2337,8 +2337,11 @@ mx-multi-picker .mx-multipicker--container .md-chips .md-chip {
 mx-multi-picker .mx-multipicker--container .md-chips .md-chip-input-container {
   overflow: visible; }
   mx-multi-picker .mx-multipicker--container .md-chips .md-chip-input-container input {
-    margin-top: -12px;
+    margin-top: -15px;
     color: #000000; }
+
+mx-multi-picker .mx-multipicker--container .md-chips md-chip + div md-input-container input {
+  margin-top: -12px !important; }
 
 mx-multi-picker md-input-container:not(.md-input-invalid).md-input-focused [disabled] label {
   color: #000000; }

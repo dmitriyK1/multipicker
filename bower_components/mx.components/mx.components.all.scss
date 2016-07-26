@@ -2685,10 +2685,14 @@ mx-multi-picker {
 			overflow: visible;
 
 			input {
-				margin-top: -12px;
+				margin-top: -15px;
 				color: #000000;
 			}
         }
+
+		md-chip + div md-input-container input {
+			margin-top: -12px !important;
+		}
 
 	}
 
