@@ -1021,44 +1021,6 @@ mx-checkbox {
 .mx-currency .mx-currency--value {
   float: left; }
 
-mx-workspace-common-paging-panel {
-  display: block;
-  position: absolute;
-  width: 100%; }
-
-.mx-workspace-common-paging-panel--pages {
-  padding-left: 32px;
-  padding-right: 32px;
-  margin: 0; }
-  @media (min-width: 0) and (max-width: 599px) {
-    .mx-workspace-common-paging-panel--pages {
-      margin: 0;
-      padding: 0px; } }
-
-.mx-workspace-common-paging-panel--prev,
-.mx-workspace-common-paging-panel--next {
-  min-width: 40px;
-  width: 40px;
-  padding: 0;
-  margin: 0; }
-
-.mx-workspace-common-paging-panel--pagenumber {
-  text-align: center;
-  min-width: 20px;
-  font-size: 12px; }
-
-md-select.ui-grid-pager-row-count-selector {
-  margin: 0px; }
-  md-select.ui-grid-pager-row-count-selector .md-text {
-    font-size: 12px; }
-  md-select.ui-grid-pager-row-count-selector .md-select-value {
-    min-width: 30px;
-    width: 30px; }
-    md-select.ui-grid-pager-row-count-selector .md-select-value .md-select-icon:after {
-      color: #898a8d; }
-  md-select.ui-grid-pager-row-count-selector .md-select-value, md-select.ui-grid-pager-row-count-selector:not([disabled]):focus .md-select-value {
-    border-bottom-color: #b8b9ba; }
-
 mx-date-picker > div {
   position: absolute;
   width: 0px;
@@ -1200,6 +1162,44 @@ mx-date-time-control .fa-calendar:before {
             display: none; }
   mx-date-time-control .time-date.time-mode > .control > .slider > .time-control > .time-inputs > input {
     font-size: 2rem; } }
+
+mx-workspace-common-paging-panel {
+  display: block;
+  position: absolute;
+  width: 100%; }
+
+.mx-workspace-common-paging-panel--pages {
+  padding-left: 32px;
+  padding-right: 32px;
+  margin: 0; }
+  @media (min-width: 0) and (max-width: 599px) {
+    .mx-workspace-common-paging-panel--pages {
+      margin: 0;
+      padding: 0px; } }
+
+.mx-workspace-common-paging-panel--prev,
+.mx-workspace-common-paging-panel--next {
+  min-width: 40px;
+  width: 40px;
+  padding: 0;
+  margin: 0; }
+
+.mx-workspace-common-paging-panel--pagenumber {
+  text-align: center;
+  min-width: 20px;
+  font-size: 12px; }
+
+md-select.ui-grid-pager-row-count-selector {
+  margin: 0px; }
+  md-select.ui-grid-pager-row-count-selector .md-text {
+    font-size: 12px; }
+  md-select.ui-grid-pager-row-count-selector .md-select-value {
+    min-width: 30px;
+    width: 30px; }
+    md-select.ui-grid-pager-row-count-selector .md-select-value .md-select-icon:after {
+      color: #898a8d; }
+  md-select.ui-grid-pager-row-count-selector .md-select-value, md-select.ui-grid-pager-row-count-selector:not([disabled]):focus .md-select-value {
+    border-bottom-color: #b8b9ba; }
 
 mx-dropdown {
   position: relative;
@@ -2261,13 +2261,21 @@ button.md-button.md-icon-button.journal-item--new__preview-attach-button {
   font-size: 2em;
   color: #c1c8cb; }
 
+.mx-multipicker--dropdown .item-hint {
+  font-weight: bold; }
+
 .md-autocomplete-suggestions-container.md-default-theme li,
 .md-autocomplete-suggestions-container li {
-  color: #757575; }
+  color: #757575;
+  -webkit-user-select: none;
+  user-select: none; }
 
 .md-autocomplete-suggestions-container.md-default-theme li .highlight,
 .md-autocomplete-suggestions-container li .highlight {
   color: #000000; }
+
+mx-multi-picker .mx-multipicker--container .md-chips {
+  padding-bottom: 0; }
 
 mx-multi-picker .md-chip-remove {
   display: none; }
@@ -2328,7 +2336,8 @@ mx-multi-picker .mx-multipicker--container .md-chips .md-chip.md-readonly {
 mx-multi-picker .mx-multipicker--container .md-chips .md-chip {
   position: relative;
   margin-right: 0;
-  padding-left: 0; }
+  padding-left: 0;
+  margin-top: 5px; }
   mx-multi-picker .mx-multipicker--container .md-chips .md-chip:hover {
     background: none; }
 
@@ -2339,7 +2348,7 @@ mx-multi-picker .mx-multipicker--container .md-chips .md-chip-input-container {
     color: #000000; }
 
 mx-multi-picker .mx-multipicker--container .md-chips md-chip + div md-input-container input {
-  margin-top: -12px !important; }
+  margin-top: -20px !important; }
 
 mx-multi-picker md-input-container:not(.md-input-invalid).md-input-focused [disabled] label {
   color: #000000; }
@@ -2362,6 +2371,9 @@ mx-multi-picker .mx-multipicker--container .md-chips .md-chip a {
   mx-multi-picker .mx-multipicker--container .md-chips .md-chip a:hover {
     color: #0399d7;
     border-bottom-color: #0399d7; }
+
+.md-autocomplete-suggestions-container {
+  min-width: 500px !important; }
 
 mx-autocomplete md-input-container {
   margin-top: 0 !important; }
