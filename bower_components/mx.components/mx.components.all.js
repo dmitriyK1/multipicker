@@ -1,3 +1,265 @@
+'use strict';
+
+angular.module('mx.components', [
+	'ngSanitize',
+	'ngMaterial',
+	'ngFileUpload',
+	'ui.grid',
+	'ui.grid.selection',
+	'ui.grid.resizeColumns',
+	'ui.grid.autoResize',
+	'ui.grid.moveColumns',
+	'ui.grid.edit',
+	'ui.grid.cellNav',
+	'ui.grid.pagination',
+	'ui.grid.expandable',
+	'scDateTime',
+	'ui.tinymce',
+	'oc.lazyLoad'
+])
+.config([
+	'$mdIconProvider',
+	'mx.internationalizationProvider',
+	'$ocLazyLoadProvider',
+	function(
+		$mdIconProvider,
+		internationalizationProvider,
+		$ocLazyLoadProvider
+	) {
+		$mdIconProvider.iconSet('mxComponents', 'mx-components-icons.svg');
+
+		internationalizationProvider.addNamespace(
+			new mx.internationalization.Namespace('components', null, mx.components.internationalization)
+		);
+
+		// Here in details https://oclazyload.readme.io/docs/oclazyloadprovider
+		$ocLazyLoadProvider.config({
+			events: true
+		});
+	}
+]);
+
+(function (w) {
+	'use strict';
+
+	angular.module('mx.components').provider('mx.components.DataProviderRegistry', function () {
+		var vm = this;
+
+		var providers = {};
+
+		vm.register = function (name, provider) {
+			providers[name] = provider;
+		};
+
+		vm.$get = ['$q', '$injector', function ($q, $injector) {
+
+			return {
+				get: get,
+				getData: getData
+			};
+
+			function get(name) {
+				if (providers.hasOwnProperty(name)) {
+					return providers[name];
+				}
+				throw new Error('Data provider with name "' + name + '" was not found');
+			}
+
+			function getData(name, parameters) {
+				var defer = $q.defer();
+				$q.when(get(name).getData($injector, parameters)).then(function (data) {
+					defer.resolve(data);
+				}, function (error) {
+					defer.reject(error);
+				});
+				return defer.promise;
+			}
+		}];
+	});
+
+	function MxDataProvider(getData) {
+		if (!getData || typeof getData !== 'function') {
+			throw new Error('data provider should have getData method');
+		}
+		Object.defineProperty(this, 'getData', {value: getData});
+	}
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.DataProvider = MxDataProvider;
+
+})(window);
+
+(function () {
+	'use strict';
+
+	/**
+	 * @ngdoc provider
+	 * @name mx.components:LazyLoadCfg
+	 *
+	 * @description
+	 * `LazyLoadCfg` allows to set components dir, where modules/js-files that should be loaded on demand are places.
+	 * This approach allows to set `componentsDir` via 'mx.components.LazyLoadCfgProvider' on config phase
+	 * as well as via 'mx.components.LazyLoadCfg' on executing phase.
+	 *
+	 * Default dir is: 'bower_components/'.
+	 *
+	 * To configure components Dir make like this:
+	 *
+	 * For config phase:
+	 * ```js
+	 * .config(['mx.components.LazyLoadCfgProvider', function (lazyLoadCfgProvider) {
+	 * 		lazyLoadCfgProvider.setComponentsDir('my_components_root/');
+	 * 	}])
+	 * ```
+	 *
+	 * For executing phase:
+	 * ```js
+	 * .run('myCtrl', ['mx.components.LazyLoadCfg', function (lazyLoadCfg) {
+	 * 		lazyLoadCfg.componentsDir = 'my_components_root/';
+	 * 	}]);
+	 * ```
+	 */
+	angular
+	.module('mx.components')
+	.provider('mx.components.LazyLoadCfg', function () {
+		var _componentsDir = 'bower_components/';
+		this.setComponentsDir = function(dir) {
+			_componentsDir = dir;
+		};
+		this.$get = function () {
+			return {
+				componentsDir: _componentsDir
+			};
+		};
+	});
+
+})();
+
+(function (w) {
+	'use strict';
+
+	var mxi18nNamespace = function (name, url, definition) {
+		Object.defineProperty(this, 'name', {writable: true, value: name});
+		Object.defineProperty(this, 'url', {writable: true, value: url});
+		Object.defineProperty(this, 'definition', {writable: true, value: definition});
+		Object.defineProperty(this, 'languages', {writable: true, value: {}});
+	};
+
+	mxi18nNamespace.prototype = {
+		localize: function (language, chunks) {
+
+			function loadLanguage(that, lng) {
+				var lngDef = {};
+				if (that.definition) {
+					lngDef = that.definition[lng] || {};
+				} else {
+					if (that.url) {
+						var url = that.url.replace('#LNG#', lng);
+						var xhr = new XMLHttpRequest();
+						xhr.open('GET', url, false);
+						xhr.send(null);
+						if (xhr.status === 200) {
+							lngDef = JSON.parse(xhr.responseText);
+						} else {
+							throw new Error('Cannot load language "' + lng + '" localization from ' + url);
+						}
+					}
+				}
+				that.languages[lng] = lngDef;
+				return lngDef;
+			}
+
+			var localization = this.languages[language] || loadLanguage(this, language);
+			chunks.forEach(function (chunk, index) {
+				localization = localization[chunk] || (index + 1 === chunks.length ? null : {});
+			});
+			return localization;
+		}
+	};
+
+	angular.module('mx.components').provider('mx.internationalization', function () {
+		var vm = this;
+
+		var devLanguageName = 'en';
+		var language = devLanguageName;
+		var namespaceDefs = {};
+
+		vm.setLanguage = function (lng) {
+			language = lng;
+		};
+
+		vm.addNamespace = function (namespace) {
+			namespaceDefs[namespace.name] = namespace;
+		};
+
+		vm.$get = function () {
+
+			var vm = {
+				get: get,
+				getFormatted: getFormatted
+			};
+
+			Object.defineProperty(vm, 'language', {
+				get: function () {
+					return language;
+				},
+				set: function (value) {
+					language = value;
+				}
+			});
+
+			return vm;
+
+			function def(defValue, key) {
+				return typeof defValue === 'undefined' ? '[localization:' + key + ']' : defValue;
+			}
+
+			function get(key, defValue) {
+				if (!key) {
+					return def(defValue, key);
+				}
+
+				var chunks = key.split('.');
+				if (chunks.length === 1) {
+					throw new Error('"' + key + '" cannot be used as a key for localization. Use [namespace.key] format.');
+				}
+				var namespace = chunks[0];
+				var namespaceDef = namespaceDefs[namespace];
+				if (!namespaceDef) {
+					throw new Error('"' + namespace + '" not found. Use mx.internationalizationProvider.addNamespace to register a namespace.');
+				}
+
+				var res = namespaceDef.localize(language, chunks.slice(1));
+
+				if (!res && language !== devLanguageName) {
+					//fallback to development language
+					res = namespaceDef.localize(devLanguageName, chunks.slice(1));
+				}
+
+				return  res || def(defValue, key);
+			}
+
+			function getFormatted() {
+				var key = arguments[0];
+				var str = get(key);
+				if (!str || str.indexOf('[localization:') === 0) {
+					return str;
+				}
+				for (var i = 1; i < arguments.length; i++) {
+					var regEx = new RegExp('\\{' + (i - 1) + '\\}', 'gm');
+					str = str.replace(regEx, arguments[i]);
+				}
+				return str;
+			}
+		};
+	});
+
+	w.mx = w.mx || {};
+	w.mx.internationalization = w.mx.internationalization || {};
+	w.mx.internationalization.Namespace = mxi18nNamespace;
+})(window);
+
 (function (w, d) {
 	'use strict';
 
@@ -170,47 +432,6 @@
 	w.mx.components.Utils = new MxUtils();
 
 })(window, document);
-
-'use strict';
-
-angular.module('mx.components', [
-	'ngSanitize',
-	'ngMaterial',
-	'ngFileUpload',
-	'ui.grid',
-	'ui.grid.selection',
-	'ui.grid.resizeColumns',
-	'ui.grid.autoResize',
-	'ui.grid.moveColumns',
-	'ui.grid.edit',
-	'ui.grid.cellNav',
-	'ui.grid.pagination',
-	'ui.grid.expandable',
-	'scDateTime',
-	'ui.tinymce',
-	'oc.lazyLoad'
-])
-.config([
-	'$mdIconProvider',
-	'mx.internationalizationProvider',
-	'$ocLazyLoadProvider',
-	function(
-		$mdIconProvider,
-		internationalizationProvider,
-		$ocLazyLoadProvider
-	) {
-		$mdIconProvider.iconSet('mxComponents', 'mx-components-icons.svg');
-
-		internationalizationProvider.addNamespace(
-			new mx.internationalization.Namespace('components', null, mx.components.internationalization)
-		);
-
-		// Here in details https://oclazyload.readme.io/docs/oclazyloadprovider
-		$ocLazyLoadProvider.config({
-			events: true
-		});
-	}
-]);
 
 (function() {
 	'use strict';
@@ -495,227 +716,6 @@ angular.module('mx.components', [
 
 })(window);
 
-(function (w) {
-	'use strict';
-
-	angular.module('mx.components').provider('mx.components.DataProviderRegistry', function () {
-		var vm = this;
-
-		var providers = {};
-
-		vm.register = function (name, provider) {
-			providers[name] = provider;
-		};
-
-		vm.$get = ['$q', '$injector', function ($q, $injector) {
-
-			return {
-				get: get,
-				getData: getData
-			};
-
-			function get(name) {
-				if (providers.hasOwnProperty(name)) {
-					return providers[name];
-				}
-				throw new Error('Data provider with name "' + name + '" was not found');
-			}
-
-			function getData(name, parameters) {
-				var defer = $q.defer();
-				$q.when(get(name).getData($injector, parameters)).then(function (data) {
-					defer.resolve(data);
-				}, function (error) {
-					defer.reject(error);
-				});
-				return defer.promise;
-			}
-		}];
-	});
-
-	function MxDataProvider(getData) {
-		if (!getData || typeof getData !== 'function') {
-			throw new Error('data provider should have getData method');
-		}
-		Object.defineProperty(this, 'getData', {value: getData});
-	}
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.DataProvider = MxDataProvider;
-
-})(window);
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc provider
-	 * @name mx.components:LazyLoadCfg
-	 *
-	 * @description
-	 * `LazyLoadCfg` allows to set components dir, where modules/js-files that should be loaded on demand are places.
-	 * This approach allows to set `componentsDir` via 'mx.components.LazyLoadCfgProvider' on config phase
-	 * as well as via 'mx.components.LazyLoadCfg' on executing phase.
-	 *
-	 * Default dir is: 'bower_components/'.
-	 *
-	 * To configure components Dir make like this:
-	 *
-	 * For config phase:
-	 * ```js
-	 * .config(['mx.components.LazyLoadCfgProvider', function (lazyLoadCfgProvider) {
-	 * 		lazyLoadCfgProvider.setComponentsDir('my_components_root/');
-	 * 	}])
-	 * ```
-	 *
-	 * For executing phase:
-	 * ```js
-	 * .run('myCtrl', ['mx.components.LazyLoadCfg', function (lazyLoadCfg) {
-	 * 		lazyLoadCfg.componentsDir = 'my_components_root/';
-	 * 	}]);
-	 * ```
-	 */
-	angular
-	.module('mx.components')
-	.provider('mx.components.LazyLoadCfg', function () {
-		var _componentsDir = 'bower_components/';
-		this.setComponentsDir = function(dir) {
-			_componentsDir = dir;
-		};
-		this.$get = function () {
-			return {
-				componentsDir: _componentsDir
-			};
-		};
-	});
-
-})();
-
-(function (w) {
-	'use strict';
-
-	var mxi18nNamespace = function (name, url, definition) {
-		Object.defineProperty(this, 'name', {writable: true, value: name});
-		Object.defineProperty(this, 'url', {writable: true, value: url});
-		Object.defineProperty(this, 'definition', {writable: true, value: definition});
-		Object.defineProperty(this, 'languages', {writable: true, value: {}});
-	};
-
-	mxi18nNamespace.prototype = {
-		localize: function (language, chunks) {
-
-			function loadLanguage(that, lng) {
-				var lngDef = {};
-				if (that.definition) {
-					lngDef = that.definition[lng] || {};
-				} else {
-					if (that.url) {
-						var url = that.url.replace('#LNG#', lng);
-						var xhr = new XMLHttpRequest();
-						xhr.open('GET', url, false);
-						xhr.send(null);
-						if (xhr.status === 200) {
-							lngDef = JSON.parse(xhr.responseText);
-						} else {
-							throw new Error('Cannot load language "' + lng + '" localization from ' + url);
-						}
-					}
-				}
-				that.languages[lng] = lngDef;
-				return lngDef;
-			}
-
-			var localization = this.languages[language] || loadLanguage(this, language);
-			chunks.forEach(function (chunk, index) {
-				localization = localization[chunk] || (index + 1 === chunks.length ? null : {});
-			});
-			return localization;
-		}
-	};
-
-	angular.module('mx.components').provider('mx.internationalization', function () {
-		var vm = this;
-
-		var devLanguageName = 'en';
-		var language = devLanguageName;
-		var namespaceDefs = {};
-
-		vm.setLanguage = function (lng) {
-			language = lng;
-		};
-
-		vm.addNamespace = function (namespace) {
-			namespaceDefs[namespace.name] = namespace;
-		};
-
-		vm.$get = function () {
-
-			var vm = {
-				get: get,
-				getFormatted: getFormatted
-			};
-
-			Object.defineProperty(vm, 'language', {
-				get: function () {
-					return language;
-				},
-				set: function (value) {
-					language = value;
-				}
-			});
-
-			return vm;
-
-			function def(defValue, key) {
-				return typeof defValue === 'undefined' ? '[localization:' + key + ']' : defValue;
-			}
-
-			function get(key, defValue) {
-				if (!key) {
-					return def(defValue, key);
-				}
-
-				var chunks = key.split('.');
-				if (chunks.length === 1) {
-					throw new Error('"' + key + '" cannot be used as a key for localization. Use [namespace.key] format.');
-				}
-				var namespace = chunks[0];
-				var namespaceDef = namespaceDefs[namespace];
-				if (!namespaceDef) {
-					throw new Error('"' + namespace + '" not found. Use mx.internationalizationProvider.addNamespace to register a namespace.');
-				}
-
-				var res = namespaceDef.localize(language, chunks.slice(1));
-
-				if (!res && language !== devLanguageName) {
-					//fallback to development language
-					res = namespaceDef.localize(devLanguageName, chunks.slice(1));
-				}
-
-				return  res || def(defValue, key);
-			}
-
-			function getFormatted() {
-				var key = arguments[0];
-				var str = get(key);
-				if (!str || str.indexOf('[localization:') === 0) {
-					return str;
-				}
-				for (var i = 1; i < arguments.length; i++) {
-					var regEx = new RegExp('\\{' + (i - 1) + '\\}', 'gm');
-					str = str.replace(regEx, arguments[i]);
-				}
-				return str;
-			}
-		};
-	});
-
-	w.mx = w.mx || {};
-	w.mx.internationalization = w.mx.internationalization || {};
-	w.mx.internationalization.Namespace = mxi18nNamespace;
-})(window);
-
 (function () {
 	'use strict';
 
@@ -880,26 +880,6 @@ angular.module('mx.components', [
 
 })();
 
-(function () {
-	'use strict';
-
-	MxTextAreaCtrl.$inject = ['mx.internationalization'];
-
-	function MxTextAreaCtrl(internationalization) {
-		mx.components.FormControlControllerBase.call(this, internationalization);
-		this.rows = this.rows || 4;
-		return this;
-	}
-
-	angular.module('mx.components').directive('mxTextArea', function () {
-		var directive = new mx.components.FormControlBase(MxTextAreaCtrl, 'mx-text-area/mx-text-area.html');
-		angular.extend(directive.bindToController, {
-			rows: '@'
-		});
-		return directive;
-	});
-})();
-
 (function (w) {
 	'use strict';
 
@@ -962,6 +942,26 @@ angular.module('mx.components', [
 	w.mx.components.Forms = w.mx.components.Forms || {};
 })(window);
 
+
+(function () {
+	'use strict';
+
+	MxTextAreaCtrl.$inject = ['mx.internationalization'];
+
+	function MxTextAreaCtrl(internationalization) {
+		mx.components.FormControlControllerBase.call(this, internationalization);
+		this.rows = this.rows || 4;
+		return this;
+	}
+
+	angular.module('mx.components').directive('mxTextArea', function () {
+		var directive = new mx.components.FormControlBase(MxTextAreaCtrl, 'mx-text-area/mx-text-area.html');
+		angular.extend(directive.bindToController, {
+			rows: '@'
+		});
+		return directive;
+	});
+})();
 
 (function () {
 	'use strict';
@@ -4240,6 +4240,41 @@ angular.module('mx.components', [
 // jshint ignore: end
 // jscs:enable
 
+(function () {
+	'use strict';
+	function mxRepeater() {
+
+		MxRepeaterCtrl.$inject = ['$scope'];
+
+		function MxRepeaterCtrl($scope) {
+			var __$vm = this;
+			__$vm.initScope = function () {
+				if (__$vm.parentControllerAs) {
+					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
+				} else {
+					$scope.dataModel = $scope.$parent;
+				}
+			};
+		}
+
+		return {
+			restrict: 'E',
+			scope: {
+				entity: '=' /* object used in scopes of templates */
+			},
+			bindToController: {
+				entities: '=',
+				templateId: '@',
+				parentControllerAs: '@'
+			},
+			templateUrl: 'mx-repeater/mx-repeater.html',
+			controller: MxRepeaterCtrl,
+			controllerAs: '__$vm'
+		};
+	}
+
+	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
+})();
 (function (w) {
 	'use strict';
 
@@ -4432,41 +4467,6 @@ angular.module('mx.components', [
 
 })(window);
 
-(function () {
-	'use strict';
-	function mxRepeater() {
-
-		MxRepeaterCtrl.$inject = ['$scope'];
-
-		function MxRepeaterCtrl($scope) {
-			var __$vm = this;
-			__$vm.initScope = function () {
-				if (__$vm.parentControllerAs) {
-					$scope[__$vm.parentControllerAs] = $scope.$parent[__$vm.parentControllerAs];
-				} else {
-					$scope.dataModel = $scope.$parent;
-				}
-			};
-		}
-
-		return {
-			restrict: 'E',
-			scope: {
-				entity: '=' /* object used in scopes of templates */
-			},
-			bindToController: {
-				entities: '=',
-				templateId: '@',
-				parentControllerAs: '@'
-			},
-			templateUrl: 'mx-repeater/mx-repeater.html',
-			controller: MxRepeaterCtrl,
-			controllerAs: '__$vm'
-		};
-	}
-
-	angular.module('mx.components').directive('mxRepeater', [mxRepeater]);
-})();
 (function () {
 	'use strict';
 
@@ -6018,306 +6018,6 @@ angular.module('mx.components', [
 
 })();
 
-(function (w) {
-	'use strict';
-
-	function LazyLoad(src) {
-		var script = document.createElement('script');
-		script.type = 'text/javascript';
-		script.async = true;
-		script.src = '/' + src;
-		var first = document.getElementsByTagName('script')[0];
-		first.parentNode.insertBefore(script, first);
-	}
-
-	w.mx = w.mx || {};
-	w.mx.components = w.mx.components || {};
-	w.mx.components.LazyLoad = LazyLoad;
-
-
-//	function MxLazyLoadCtrl(){
-//		return this;
-//	}
-//
-//	angular.module('mx.components').directive('mxLazyLoad', function() {
-//		return {
-//			restrict: 'E',
-//			scope: false,
-////			replace:true,
-//			controller:MxLazyLoadCtrl,
-//			controllerAs: 'vm',
-//			bindToController: {
-//				src:'@'
-//			},
-//			template: function(elem, attrs){
-//				return '<script src="' + attrs.src + '"></script>';
-//			} ,
-//			link: function(scope, elem, attr) {
-//				var code = elem.text();
-//				var f = new Function(code);// jshint ignore:line
-//				f();
-//			}
-//		};
-//	});
-
-
-	angular.module('mx.components').directive('mxLazyLoad', function () {
-		return {
-			restrict: 'A',
-			scope: false,
-			link: function (/*scope, elem, attr*/) {
-				//if(attr.type === 'text/javascript-lazy'){
-				//	var code = elem.text();
-				//	var f = new Function(code);// jshint ignore:line
-				//	f();
-				//}
-			}
-		};
-	});
-
-}(window));
-
-(function () {
-	'use strict';
-
-	/**
-	 * @ngdoc directive
-	 * @name mx.components:mxJournal
-	 * @module mx.components
-	 * @restrict 'E'
-	 * @description
-	 * The mxJournal control provides simple journal functionality.
-	 *
-	 * The example below demonstrates some of the attributes you may use with the Journal control:
-	 * @param {string} itemsPerPage@ - How many items should be shown at once
-	 * @param {string} currentUserId@ - current user identifier
-	 * @param {string} currentUserPhoto@ - current user avatar image
-	 * @param {expression} onGetData& - Callback function to load journal items
-	 * @param {expression} onAdd& - Callback function to add new comment
-	 * @param {expression} attachFilesHandler& - if set then files attaching functionality will be enabled.
-	 * 			It expects a function that returns a promise,
-	 *			result of which is an array of file objects that have at least a key "DisplayString".
-	 *			Example: [
-	 *				{DisplayString: "file1.txt", url: "path/to/file/file1.txt"},
-	 *				{DisplayString: "file2.pdf", url: "path/to/file/file2.pdf"},
-	 *				...
-	 *			];
-	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
-	 *
-	 * @usage:
-	 *	 	<mx-journal
-	 *			on-add="vm.addComment()"
-	 *			on-get-data="vm.getData()"
-	 *			read-only="false"
-	 *			data-disabled="true"
-	 *			current-user-id="12345"
-	 *			items-per-page="5">
-	 *		</mx-journal>
-	 */
-	angular.module('mx.components').directive('mxJournal', function () {
-
-		MxJournalCtrl.$inject = [
-			'$q',
-			'$timeout',
-			'$scope',
-			'$element',
-			'mx.internationalization',
-			'mx.shell.NotificationService'
-		];
-
-		function MxJournalCtrl(
-			$q,
-			$timeout,
-			$scope,
-			$element,
-			internationalization,
-			notificationService
-		) {
-			var vm = this;
-
-			vm.processingItems = false;
-			vm.canLoadMore = false;
-			vm._showRichEditor = false;
-
-			var itemsPerPage = vm.itemsPerPage ? parseInt(vm.itemsPerPage, 10) : 10;
-
-			vm.loadMoreItems = loadMoreItems;
-
-			vm.newComment = '';
-			vm.addComment = addComment;
-
-			vm._attachingInProgress = false;
-			vm._useFileAttachments = !!$($element).attr('attach-files-handler');
-			vm.attachments = [];
-			vm.attachFiles = attachFiles;
-			vm._handleRichTextBoxBlur = _handleRichTextBoxBlur;
-
-			vm.readOnly = !!vm.readOnly;
-
-			vm.items = [];
-
-			reload();
-
-			$scope.$watch('vm._showRichEditor', function () {
-				if (vm._showRichEditor) {
-					// scroll down on editor activated if there are scrollbar
-					$timeout(function () {
-						var parent = $element[0];
-						while (parent && !_hasScrollBar(parent) && parent.tabName !== 'BODY') {
-							parent = parent.parentElement;
-						}
-						if (parent && parent.tabName !== 'BODY') {
-							$(parent).animate({
-								scrollTop: parent.scrollTop + 110 + 'px'
-							}, 600);
-						}
-					}, 200);
-				}
-			});
-
-			return vm;
-
-			function reload() {
-				vm.newComment = '';
-				vm.attachments = [];
-				getJournalEntries(true);
-			}
-
-			function finishProcessingItems() {
-				vm.processingItems = false;
-			}
-
-			function loadMoreItems() {
-				if (vm.processingItems || !vm.canLoadMore) {
-					return;
-				}
-				getJournalEntries(false);
-			}
-
-			function getJournalEntries(reload) {
-				vm.canLoadMore = false;
-				vm.processingItems = true;
-				var start = 0;
-				if (!reload) {
-					start = vm.items.length;
-				}
-				$q.when(vm.onGetData({start: start, count: itemsPerPage + 1})).then(function (data) {
-					data = data || [];
-					var moreItemsExists = data.length === itemsPerPage + 1;
-					if (moreItemsExists) {
-						data.pop();
-					}
-
-					data.forEach(function (item) {
-						item.__my = item.userId === vm.currentUserId;
-						item.__created = new Date(item.created);
-
-					});
-					var items = null;
-					if (reload) {
-						items = data;
-					} else {
-						items = vm.items;
-						for (var i = 0; i < data.length; i++) {
-							items.push(data[i]);
-						}
-					}
-					if (items && items.length) {
-						items.forEach(function (item) {
-							item.__my = item.userId === vm.currentUserId;
-						});
-						vm.items = items;
-					}
-					vm.canLoadMore = moreItemsExists;
-				})
-				.finally(function () {
-					finishProcessingItems();
-				});
-			}
-
-			function addComment() {
-				if (!vm.newComment && vm.attachments.length === 0) {
-					return;
-				}
-				vm.adding = true;
-				$q.when(vm.onAdd({
-					text: vm.newComment,
-					attachments: vm.attachments
-				}))
-				.then(function () {
-					reload();
-					$timeout(function () {
-						vm._showRichEditor = false;
-					}, 100);
-				}, function (error) {
-					notificationService.error(
-						internationalization.get('components.journal.adding_error') +
-						(error && error.statusText ? ': ' + error.statusText : '')
-					);
-				})
-				.finally(function () {
-					vm.adding = false;
-				});
-			}
-
-			function attachFiles() {
-				vm._attachingInProgress = true;
-				$q.when(vm.attachFilesHandler())
-				.then(function (result) {
-					var _fileNamesList = vm.attachments.map(function (file) {
-						return file.DisplayString;
-					});
-					result.selectedObjects.forEach(function (file) {
-						if (_fileNamesList.indexOf(file.DisplayString) === -1) {
-							vm.attachments.push(file);
-						}
-					});
-				})
-				.finally(function () {
-					vm._attachingInProgress = false;
-				});
-			}
-
-			function _hasScrollBar(el) {
-				var result = false;
-				if (el) {
-					result = !!el.scrollTop;
-					if (!result) {
-						el.scrollTop = 1;
-						result = !!el.scrollTop;
-						el.scrollTop = 0;
-					}
-					result = result && $(el).css('overflow-y') !== 'hidden';
-				}
-				return result;
-			}
-
-			function _handleRichTextBoxBlur() {
-				$timeout(function () {
-					vm._showRichEditor = vm.newComment!=='' || vm.attachments.length > 0 || vm._attachingInProgress;
-				}, 100);
-			}
-		}
-
-		return {
-			restrict: 'E',
-			scope: {},
-			bindToController: {
-				itemsPerPage: '@',
-				onGetData: '&',
-				onAdd: '&',
-				attachFilesHandler: '&',
-				currentUserId: '@',
-				currentUserPhoto: '@',
-				readOnly: '='
-			},
-			controller: MxJournalCtrl,
-			controllerAs: 'vm',
-			templateUrl: 'mx-journal/mx-journal.html'
-		};
-	});
-})();
-
 (function () {
 	'use strict';
 
@@ -6877,6 +6577,306 @@ angular.module('mx.components', [
 		}]);
 })();
 
+(function (w) {
+	'use strict';
+
+	function LazyLoad(src) {
+		var script = document.createElement('script');
+		script.type = 'text/javascript';
+		script.async = true;
+		script.src = '/' + src;
+		var first = document.getElementsByTagName('script')[0];
+		first.parentNode.insertBefore(script, first);
+	}
+
+	w.mx = w.mx || {};
+	w.mx.components = w.mx.components || {};
+	w.mx.components.LazyLoad = LazyLoad;
+
+
+//	function MxLazyLoadCtrl(){
+//		return this;
+//	}
+//
+//	angular.module('mx.components').directive('mxLazyLoad', function() {
+//		return {
+//			restrict: 'E',
+//			scope: false,
+////			replace:true,
+//			controller:MxLazyLoadCtrl,
+//			controllerAs: 'vm',
+//			bindToController: {
+//				src:'@'
+//			},
+//			template: function(elem, attrs){
+//				return '<script src="' + attrs.src + '"></script>';
+//			} ,
+//			link: function(scope, elem, attr) {
+//				var code = elem.text();
+//				var f = new Function(code);// jshint ignore:line
+//				f();
+//			}
+//		};
+//	});
+
+
+	angular.module('mx.components').directive('mxLazyLoad', function () {
+		return {
+			restrict: 'A',
+			scope: false,
+			link: function (/*scope, elem, attr*/) {
+				//if(attr.type === 'text/javascript-lazy'){
+				//	var code = elem.text();
+				//	var f = new Function(code);// jshint ignore:line
+				//	f();
+				//}
+			}
+		};
+	});
+
+}(window));
+
+(function () {
+	'use strict';
+
+	/**
+	 * @ngdoc directive
+	 * @name mx.components:mxJournal
+	 * @module mx.components
+	 * @restrict 'E'
+	 * @description
+	 * The mxJournal control provides simple journal functionality.
+	 *
+	 * The example below demonstrates some of the attributes you may use with the Journal control:
+	 * @param {string} itemsPerPage@ - How many items should be shown at once
+	 * @param {string} currentUserId@ - current user identifier
+	 * @param {string} currentUserPhoto@ - current user avatar image
+	 * @param {expression} onGetData& - Callback function to load journal items
+	 * @param {expression} onAdd& - Callback function to add new comment
+	 * @param {expression} attachFilesHandler& - if set then files attaching functionality will be enabled.
+	 * 			It expects a function that returns a promise,
+	 *			result of which is an array of file objects that have at least a key "DisplayString".
+	 *			Example: [
+	 *				{DisplayString: "file1.txt", url: "path/to/file/file1.txt"},
+	 *				{DisplayString: "file2.pdf", url: "path/to/file/file2.pdf"},
+	 *				...
+	 *			];
+	 * @param {boolean} readOnly= - The readOnly property sets or returns whether the contents of a mxTextBox should be read-only.
+	 *
+	 * @usage:
+	 *	 	<mx-journal
+	 *			on-add="vm.addComment()"
+	 *			on-get-data="vm.getData()"
+	 *			read-only="false"
+	 *			data-disabled="true"
+	 *			current-user-id="12345"
+	 *			items-per-page="5">
+	 *		</mx-journal>
+	 */
+	angular.module('mx.components').directive('mxJournal', function () {
+
+		MxJournalCtrl.$inject = [
+			'$q',
+			'$timeout',
+			'$scope',
+			'$element',
+			'mx.internationalization',
+			'mx.shell.NotificationService'
+		];
+
+		function MxJournalCtrl(
+			$q,
+			$timeout,
+			$scope,
+			$element,
+			internationalization,
+			notificationService
+		) {
+			var vm = this;
+
+			vm.processingItems = false;
+			vm.canLoadMore = false;
+			vm._showRichEditor = false;
+
+			var itemsPerPage = vm.itemsPerPage ? parseInt(vm.itemsPerPage, 10) : 10;
+
+			vm.loadMoreItems = loadMoreItems;
+
+			vm.newComment = '';
+			vm.addComment = addComment;
+
+			vm._attachingInProgress = false;
+			vm._useFileAttachments = !!$($element).attr('attach-files-handler');
+			vm.attachments = [];
+			vm.attachFiles = attachFiles;
+			vm._handleRichTextBoxBlur = _handleRichTextBoxBlur;
+
+			vm.readOnly = !!vm.readOnly;
+
+			vm.items = [];
+
+			reload();
+
+			$scope.$watch('vm._showRichEditor', function () {
+				if (vm._showRichEditor) {
+					// scroll down on editor activated if there are scrollbar
+					$timeout(function () {
+						var parent = $element[0];
+						while (parent && !_hasScrollBar(parent) && parent.tabName !== 'BODY') {
+							parent = parent.parentElement;
+						}
+						if (parent && parent.tabName !== 'BODY') {
+							$(parent).animate({
+								scrollTop: parent.scrollTop + 110 + 'px'
+							}, 600);
+						}
+					}, 200);
+				}
+			});
+
+			return vm;
+
+			function reload() {
+				vm.newComment = '';
+				vm.attachments = [];
+				getJournalEntries(true);
+			}
+
+			function finishProcessingItems() {
+				vm.processingItems = false;
+			}
+
+			function loadMoreItems() {
+				if (vm.processingItems || !vm.canLoadMore) {
+					return;
+				}
+				getJournalEntries(false);
+			}
+
+			function getJournalEntries(reload) {
+				vm.canLoadMore = false;
+				vm.processingItems = true;
+				var start = 0;
+				if (!reload) {
+					start = vm.items.length;
+				}
+				$q.when(vm.onGetData({start: start, count: itemsPerPage + 1})).then(function (data) {
+					data = data || [];
+					var moreItemsExists = data.length === itemsPerPage + 1;
+					if (moreItemsExists) {
+						data.pop();
+					}
+
+					data.forEach(function (item) {
+						item.__my = item.userId === vm.currentUserId;
+						item.__created = new Date(item.created);
+
+					});
+					var items = null;
+					if (reload) {
+						items = data;
+					} else {
+						items = vm.items;
+						for (var i = 0; i < data.length; i++) {
+							items.push(data[i]);
+						}
+					}
+					if (items && items.length) {
+						items.forEach(function (item) {
+							item.__my = item.userId === vm.currentUserId;
+						});
+						vm.items = items;
+					}
+					vm.canLoadMore = moreItemsExists;
+				})
+				.finally(function () {
+					finishProcessingItems();
+				});
+			}
+
+			function addComment() {
+				if (!vm.newComment && vm.attachments.length === 0) {
+					return;
+				}
+				vm.adding = true;
+				$q.when(vm.onAdd({
+					text: vm.newComment,
+					attachments: vm.attachments
+				}))
+				.then(function () {
+					reload();
+					$timeout(function () {
+						vm._showRichEditor = false;
+					}, 100);
+				}, function (error) {
+					notificationService.error(
+						internationalization.get('components.journal.adding_error') +
+						(error && error.statusText ? ': ' + error.statusText : '')
+					);
+				})
+				.finally(function () {
+					vm.adding = false;
+				});
+			}
+
+			function attachFiles() {
+				vm._attachingInProgress = true;
+				$q.when(vm.attachFilesHandler())
+				.then(function (result) {
+					var _fileNamesList = vm.attachments.map(function (file) {
+						return file.DisplayString;
+					});
+					result.selectedObjects.forEach(function (file) {
+						if (_fileNamesList.indexOf(file.DisplayString) === -1) {
+							vm.attachments.push(file);
+						}
+					});
+				})
+				.finally(function () {
+					vm._attachingInProgress = false;
+				});
+			}
+
+			function _hasScrollBar(el) {
+				var result = false;
+				if (el) {
+					result = !!el.scrollTop;
+					if (!result) {
+						el.scrollTop = 1;
+						result = !!el.scrollTop;
+						el.scrollTop = 0;
+					}
+					result = result && $(el).css('overflow-y') !== 'hidden';
+				}
+				return result;
+			}
+
+			function _handleRichTextBoxBlur() {
+				$timeout(function () {
+					vm._showRichEditor = vm.newComment!=='' || vm.attachments.length > 0 || vm._attachingInProgress;
+				}, 100);
+			}
+		}
+
+		return {
+			restrict: 'E',
+			scope: {},
+			bindToController: {
+				itemsPerPage: '@',
+				onGetData: '&',
+				onAdd: '&',
+				attachFilesHandler: '&',
+				currentUserId: '@',
+				currentUserPhoto: '@',
+				readOnly: '='
+			},
+			controller: MxJournalCtrl,
+			controllerAs: 'vm',
+			templateUrl: 'mx-journal/mx-journal.html'
+		};
+	});
+})();
+
 (function (){
     'use strict';
 
@@ -7074,6 +7074,19 @@ angular.module('mx.components', [
             closePanel();
         }
     }
+
+})();
+
+(function () {
+	'use strict';
+
+	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
+		function mxi18nFilter(string, defaultText) {
+			return internationalization.get(string, defaultText);
+		}
+
+		return mxi18nFilter;
+	}]);
 
 })();
 
@@ -7904,19 +7917,6 @@ angular.module('mx.components', [
 			templateUrl: 'mx-grid/mx-grid-edit-form-field.html'
 		};
 	});
-
-})();
-
-(function () {
-	'use strict';
-
-	angular.module('mx.components').filter('mxi18n', ['mx.internationalization', function (internationalization) {
-		function mxi18nFilter(string, defaultText) {
-			return internationalization.get(string, defaultText);
-		}
-
-		return mxi18nFilter;
-	}]);
 
 })();
 
@@ -14561,10 +14561,10 @@ $templateCache.put("mx-grid/mx-grid.html","<div><div ng-if=\"grid.options.enable
 $templateCache.put("mx-icon-picker/mx-icon-picker.html","<div class=\"mx-icon-picker\" ng-class=\"{\'mx-icon-picker--empty\': !vm.model}\" ng-click=\"vm.innerClick($event)\"><md-input-container md-is-error=\"vm.controlNgModel.mxInvalid\"><label><span ng-bind-html=\"::vm.label\"></span></label> <span class=\"mx-icon-picker--icon-border\" ng-click=\"vm.activate($event)\"><md-icon ng-show=\"vm.icon\" class=\"mx-icon-picker--icon\">{{vm.icon}}</md-icon></span><md-icon ng-show=\"!vm._readOnly && !vm._disabled && vm.model\" class=\"mx-icon-picker--clear\" ng-click=\"vm.clear($event)\">clear</md-icon><input name=\"{{::vm.internalName}}\" ng-model=\"vm.text\" ng-disabled=\"vm._disabled\" class=\"mx-icon-picker--input\" ng-focus=\"vm.activate()\" ng-readonly=\"vm._readOnly\" ng-pattern=\"vm.pattern\"><mx-control-errors track-internal=\"{{::vm.trackInternal}}\"></mx-control-errors></md-input-container><div class=\"mx-icon-picker--library md-whiteframe-1dp\" ng-class=\"{\'mx-icon-picker--library__active\': vm.active}\"><div ng-show=\"!vm.itemsFound\" class=\"layout-column mx-icon-picker--library__empty-search\"><md-icon>block</md-icon><h4 flex=\"\">{{\'components.common.noData\' | mxi18n}}</h4></div><div ng-repeat=\"category in vm.library\" class=\"mx-icon-picker--library-category\" ng-show=\"category.visible\"><h3>{{::category.name}}</h3><div ng-repeat=\"item in category.icons track by item.icon.id\" title=\"{{::item.icon.name}}\" ng-click=\"vm.apply($event, item.icon)\" class=\"mx-icon-picker--library-icon\" ng-show=\"item.visible\"><md-icon>{{::item.icon.id}}</md-icon><span>{{::item.icon.name}}</span></div></div></div></div>");
 $templateCache.put("mx-image-preview/mx-image-preview.html","<md-dialog aria-label=\"Image preview\" style=\"max-width: inherit;max-height: inherit;\"><md-content class=\"sticky-container\"><md-subheader class=\"md-sticky-no-effect\">{{\'components.mx-image-preview.title\' | mxi18n : \'Image preview\'}}</md-subheader><div class=\"dialog-content\"><img mx-lightbox-src=\"{{Lightbox.imageUrl}}\" alt=\"\"></div></md-content><div class=\"md-actions\" layout=\"row\"><md-button class=\"md-raised md-primary\" ng-click=\"Lightbox.cancel()\">{{\'components.mx-image-preview.close\' | mxi18n : \'Close\'}}</md-button></div></md-dialog>");
 $templateCache.put("mx-journal/mx-journal.html","<div class=\"journal-container\"><div class=\"journal-container--items\"><div ng-repeat=\"item in vm.items\" class=\"journal-item\" layout=\"column\" ng-class=\"{ \'journal-item--my\':item.__my, \'journal-item--first\':item.__first }\"><div><div class=\"journal-item__user\"><div layout=\"row\"><div ng-init=\"userPhoto = item.photo\"><img ng-show=\"userPhoto\" ng-src=\"{{::userPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!userPhoto\" class=\"journal-item__photo-letter journal-item__photo\">{{::item.userName | limitTo:1}}</span></div><div class=\"journal-item__user-name\" flex=\"\">{{::item.userName}}</div></div></div><div class=\"journal-item__date\">{{::item.__created | date:\'medium\'}}</div></div><div class=\"journal-item__content\"><p ng-bind-html=\"item.text\"></p></div></div><div class=\"journal-container--load-more\" ng-show=\"vm.canLoadMore && !vm.processingItems\"><md-button ng-click=\"vm.loadMoreItems()\">{{\'components.journal.load_more_items\' | mxi18n}}</md-button></div><div class=\"journal-container--load-more\" ng-show=\"vm.processingItems\">{{\'components.journal.loading\' | mxi18n}}</div></div><div class=\"journal-item--new journal-item\" ng-if=\"!vm.readOnly\"><div ng-init=\"myPhoto = vm.currentUserPhoto\" class=\"journal-item__photo-wrapper\"><img ng-show=\"myPhoto\" ng-src=\"{{::myPhoto}}\" class=\"journal-item__photo\"> <span ng-show=\"!myPhoto\" class=\"journal-item__photo-letter journal-item__photo\">Y</span></div><div ng-if=\"vm._showRichEditor\"><mx-rich-text-box class=\"journal-item--new-textarea\" ng-model=\"vm.newComment\" advanced-mode=\"false\" set-focus=\"true\" on-blur=\"vm._handleRichTextBoxBlur()\"></mx-rich-text-box><md-button class=\"journal-item--new__content-button\" ng-click=\"vm.addComment();\" title=\"{{\'components.journal.send_button_label\' | mxi18n}}\" ng-disabled=\"vm.adding || vm.newComment===\'\' && vm.attachments.length === 0\" aria-label=\"{{\'components.journal.send_button_label\' | mxi18n}}\">{{\'components.journal.send_button_label\' | mxi18n}}</md-button><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button></div><div ng-show=\"!vm._showRichEditor\" class=\"journal-item--new-textarea-placeholder\" ng-click=\"vm._showRichEditor = true;\"><md-button ng-show=\":: vm._useFileAttachments\" class=\"md-icon-button journal-item--new__preview-attach-button\" ng-click=\"vm.attachFiles()\" aria-label=\"{{\'components.journal.attach_files_button_label\' | mxi18n}}\"><md-icon>attachment</md-icon></md-button>{{\'components.journal.write_your_comment\' | mxi18n}}</div><ul class=\"journal-item--new-attachments-list\"><li ng-repeat=\"file in vm.attachments\"><md-icon>insert_drive_file</md-icon>{{::file.DisplayString}}</li></ul></div></div>");
-$templateCache.put("mx-picker/mx-autocomplete.html","<md-autocomplete md-items=\"item in vm.autoCompleteSearch()\" md-search-text=\"vm.autoCompleteSearchText\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-item-text=\"vm.getTitle(item)\" md-no-cache=\"true\" md-floating-label=\"{{vm.label}}\" ng-disabled=\"vm._disabled || vm._readOnly\" md-min-length=\"0\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\"><md-item-template><span md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}</span></md-not-found><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-autocomplete>");
-$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\"><md-input-container ng-class=\"{ \'disabled\': vm._disabled, \'readonly\': vm._readOnly }\"><md-chips md-autocomplete-snap=\"width\" md-on-add=\"vm.onSelectionChange(\'add\')\" md-on-remove=\"vm.onSelectionChange(\'remove\')\" md-require-match=\"true\" ng-model=\"vm.selectedItems\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete md-floating-label=\"{{ vm.controlLabel }}\" input-name=\"{{::vm.internalName}}\" md-delay=\"vm.loadDelay\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-item-text=\"vm.getTitle(item)\" md-items=\"item in vm.autoCompleteSearch()\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\" md-min-length=\"0\" md-autoselect=\"true\" md-no-cache=\"true\" md-search-text=\"vm.autoCompleteSearchText\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-select-on-match=\"true\" md-match-case-insensitive=\"true\" spellcheck=\"false\"><md-item-template><span class=\"item-title\"><span md-highlight-flags=\"^i\" md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span> <span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template><div class=\"remove\" md-chip-remove=\"\"><md-icon md-svg-icon=\"md-close\"></md-icon></div></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
-$templateCache.put("mx-picker/mx-select.html","<md-input-container><label>{{vm.label}}</label><md-select ng-model-options=\"{ trackBy: \'vm.getTrackingValue($value)\' }\" ng-model=\"vm.selectModel\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-readonly=\"vm._readOnly\"><md-option ng-value=\"vm.getId(item)\" ng-repeat=\"item in vm.items\">{{vm.getTitle(item)}}</md-option></md-select><mx-control-errors></mx-control-errors></md-input-container>");
 $templateCache.put("mx-numeric-edit/mx-numeric-edit.html","<md-input-container md-is-error=\"vm.controlNgModel.mxInvalid\"><label>{{vm.label}}</label> <input name=\"{{::vm.name}}\" mx-mask=\"{{::vm.format}}\" ng-model=\"vm.model\" ng-disabled=\"vm._disabled\" ng-readonly=\"vm._readOnly\"><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container>");
+$templateCache.put("mx-picker/mx-autocomplete.html","<md-autocomplete md-items=\"item in vm.autoCompleteSearch()\" md-search-text=\"vm.autoCompleteSearchText\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-item-text=\"vm.getTitle(item)\" md-no-cache=\"true\" md-floating-label=\"{{vm.label}}\" ng-disabled=\"vm._disabled || vm._readOnly\" md-min-length=\"0\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\"><md-item-template><span md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}</span></md-not-found><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-autocomplete>");
+$templateCache.put("mx-picker/mx-multi-picker.html","<div class=\"mx-multipicker--container\"><md-input-container ng-class=\"{ \'disabled\': vm._disabled, \'readonly\': vm._readOnly }\"><md-chips md-autocomplete-snap=\"\" md-on-add=\"vm.onSelectionChange(\'add\')\" md-on-remove=\"vm.onSelectionChange(\'remove\')\" md-require-match=\"true\" ng-model=\"vm.selectedItems\" readonly=\"(vm._disabled || vm._readOnly) && vm.selectedItems.length > 0\"><md-autocomplete md-floating-label=\"{{ vm.controlLabel }}\" input-name=\"{{::vm.internalName}}\" md-delay=\"vm.loadDelay\" md-is-error=\"vm.controlNgModel.mxInvalid\" md-item-text=\"vm.getTitle(item)\" md-items=\"item in vm.autoCompleteSearch()\" md-menu-class=\"{{::vm.dropdownHtmlClass}}\" md-min-length=\"0\" md-autoselect=\"true\" md-no-cache=\"true\" md-search-text=\"vm.autoCompleteSearchText\" md-search-text-change=\"vm.autoCompleteSearchTextChange()\" md-selected-item=\"vm.selectedItem\" md-selected-item-change=\"vm.autoCompleteSelectedItemChange(item)\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-hide=\"vm.single && vm.selectedItems.length > 0\" md-select-on-match=\"true\" md-match-case-insensitive=\"true\" spellcheck=\"false\"><md-item-template><span class=\"item-hint\" style=\"font-weight: bold;\">{{ \'Hint\' }}</span> <span class=\"item-title\"><span md-highlight-flags=\"^i\" md-highlight-text=\"vm.autoCompleteSearchText\">{{$parent.vm.getTitle(item)}}</span></span> <span class=\"item-details\" ng-if=\"vm.itemDetailsField\">{{item[vm.itemDetailsField]}}</span></md-item-template><md-not-found><span>{{vm.notFoundMessage}}<a ng-if=\"vm.availableNotFoundButton\" href=\"\" ng-click=\"vm.notFoundClick()\">{{vm.notFound.buttonText}}</a></span></md-not-found></md-autocomplete><md-chip-template><a ng-dblclick=\"vm.onNavigateItem($chip)\"><span ng-if=\"vm.itemDetailsField\" class=\"item-details\" ng-bind=\"$chip[vm.itemDetailsField]\"></span> <span class=\"item-title\">{{$parent.vm.getTitle($chip)}}</span></a></md-chip-template><div class=\"remove\" md-chip-remove=\"\"><md-icon md-svg-icon=\"md-close\"></md-icon></div></md-chips><md-icon ng-if=\"vm.browseLookup && !(vm._disabled || vm._readOnly)\" ng-click=\"vm.onBrowseLookup()\" class=\"mx-multipicker--icon\">search</md-icon><div class=\"mx-input-hint\" ng-show=\"vm._showHints\">{{::vm.hint}}</div><mx-control-errors ng-show=\"!vm._showHints\" options=\"{validationStatus:vm.validationStatus}\"></mx-control-errors></md-input-container></div>");
+$templateCache.put("mx-picker/mx-select.html","<md-input-container><label>{{vm.label}}</label><md-select ng-model-options=\"{ trackBy: \'vm.getTrackingValue($value)\' }\" ng-model=\"vm.selectModel\" ng-disabled=\"vm._disabled || vm._readOnly\" ng-readonly=\"vm._readOnly\"><md-option ng-value=\"vm.getId(item)\" ng-repeat=\"item in vm.items\">{{vm.getTitle(item)}}</md-option></md-select><mx-control-errors></mx-control-errors></md-input-container>");
 $templateCache.put("mx-rating/mx-rating.html","<label>{{vm.label}}</label><div class=\"mx-rating\" ng-class=\"[vm._disabled ? \'mx-rating--disabled\' : \'\']\"><md-icon class=\"mx-rating--star\" ng-repeat=\"star in vm.stars\" ng-class=\"{\'mx-rating--star-filled\': star.filled }\" ng-click=\"vm.toggle($index)\">star</md-icon></div>");
 $templateCache.put("mx-repeater/mx-repeater.html","<div class=\"mx-repeater\" flex=\"\"><div flex=\"\" class=\"mx-repeater--row\" ng-repeat=\"item in __$vm.entities\"><div class=\"mx-repeater--panel\" flex=\"\" ng-include=\"\" src=\"__$vm.templateId\" data-onload=\"__$vm.initScope()\"></div></div></div>");
 $templateCache.put("mx-rich-text-box/mx-rich-text-box.html","<md-input-container class=\"md-input-has-value\"><label><span ng-bind-html=\"::vm.label\"></span></label><div class=\"mx-tinymce-container\"><div ng-model=\"vm.model\" ui-tinymce=\"vm.tinymceOptions\"></div><mx-control-errors></mx-control-errors></div></md-input-container>");
